@@ -69,7 +69,7 @@ const activeSlug = courseSlugs.find((slug) => pathname.includes(`/cursos/${slug}
                   </a>
                 </li>
               )}
-              {link.label === "Cursos" && (activeSlug || pathname.includes("/toefl-ibt")) && (
+              {false && link.label === "Cursos" && (activeSlug || pathname.includes("/toefl-ibt")) && (
                 <li>
                   <a
                     href={`/cursos/${activeSlug || "toefl-ibt"}/precios`}
@@ -148,7 +148,7 @@ const activeSlug = courseSlugs.find((slug) => pathname.includes(`/cursos/${slug}
                 </div>
               )}
             </div>
-            {link.label === "Cursos" && (activeSlug || pathname.includes("/toefl-ibt")) && (
+            {false && link.label === "Cursos" && (activeSlug || pathname.includes("/toefl-ibt")) && (
               <div>
                 <a
                   href={`/cursos/${activeSlug || "toefl-ibt"}/precios`}
