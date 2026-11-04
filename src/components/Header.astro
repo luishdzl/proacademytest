@@ -3,7 +3,7 @@ import { NAV_LINKS } from "@/data/site";
 const pathname = Astro.url.pathname;
 
 const courseSlugs = ["toefl-ibt", "sat", "gre", "gmat", "paa"];
-const activeSlug = courseSlugs.find((slug) => pathname.includes(`/cursos/${slug}`) || pathname.includes(`/${slug}/`) || pathname.endsWith(`/${slug}`));
+const activeSlug = courseSlugs.find((slug) => pathname.includes(`/cursos/${slug}`) || pathname === `/${slug}` || pathname.startsWith(`/${slug}/`));
 ---
 
 <header
@@ -24,8 +24,16 @@ const activeSlug = courseSlugs.find((slug) => pathname.includes(`/cursos/${slug}
       <ul class="hidden items-center gap-2 lg:flex">
         {NAV_LINKS.map((link) => {
           const isTestimonios = link.label === "Testimonios";
-          const targetHref = isTestimonios && activeSlug ? `/cursos/${activeSlug}/testimonios` : link.href;
-          const isTestimoniosActive = isTestimonios && (pathname === "/testimonios" || (activeSlug && pathname.includes(`/cursos/${activeSlug}/testimonios`)));
+          const isPrecios = link.label === "Precios";
+          let targetHref = "href" in link ? link.href : "#";
+          if (isTestimonios && activeSlug) {
+            targetHref = `/${activeSlug}/testimonios`;
+          } else if (isPrecios && activeSlug) {
+            targetHref = `/${activeSlug}/precio`;
+          }
+          const isTestimoniosActive = isTestimonios && (pathname === "/testimonios" || (activeSlug && (pathname.includes(`/${activeSlug}/testimonios`) || pathname.includes(`/cursos/${activeSlug}/testimonios`))));
+          const isPreciosActive = isPrecios && pathname.includes("/precio");
+          const isLinkActive = isTestimonios ? isTestimoniosActive : isPrecios ? isPreciosActive : false;
 
           return (
             <>
@@ -62,23 +70,10 @@ const activeSlug = courseSlugs.find((slug) => pathname.includes(`/cursos/${slug}
                     href={targetHref}
                     class:list={[
                       "rounded-full px-4 py-2 font-display text-[15px] transition-colors hover:text-teal-300",
-                      isTestimoniosActive ? "text-teal-300 font-bold" : "font-semibold text-pearl/80"
+                      isLinkActive ? "text-teal-300 font-bold" : "font-semibold text-pearl/80"
                     ]}
                   >
                     {link.label}
-                  </a>
-                </li>
-              )}
-              {false && link.label === "Cursos" && (activeSlug || pathname.includes("/toefl-ibt")) && (
-                <li>
-                  <a
-                    href={`/cursos/${activeSlug || "toefl-ibt"}/precios`}
-                    class:list={[
-                      "rounded-full px-4 py-2 font-display text-[15px] transition-colors hover:text-teal-300",
-                      pathname.includes("/precios") ? "text-teal-300 font-bold" : "font-semibold text-pearl/80"
-                    ]}
-                  >
-                    Precios
                   </a>
                 </li>
               )}
@@ -122,8 +117,16 @@ const activeSlug = courseSlugs.find((slug) => pathname.includes(`/cursos/${slug}
     <div class="container-edge flex min-h-full flex-col justify-center gap-2 py-24">
       {NAV_LINKS.map((link, i) => {
         const isTestimonios = link.label === "Testimonios";
-        const targetHref = isTestimonios && activeSlug ? `/cursos/${activeSlug}/testimonios` : link.href;
-        const isTestimoniosActive = isTestimonios && (pathname === "/testimonios" || (activeSlug && pathname.includes(`/cursos/${activeSlug}/testimonios`)));
+        const isPrecios = link.label === "Precios";
+        let targetHref = "href" in link ? link.href : "#";
+        if (isTestimonios && activeSlug) {
+          targetHref = `/${activeSlug}/testimonios`;
+        } else if (isPrecios && activeSlug) {
+          targetHref = `/${activeSlug}/precio`;
+        }
+        const isTestimoniosActive = isTestimonios && (pathname === "/testimonios" || (activeSlug && (pathname.includes(`/${activeSlug}/testimonios`) || pathname.includes(`/cursos/${activeSlug}/testimonios`))));
+        const isPreciosActive = isPrecios && pathname.includes("/precio");
+        const isLinkActive = isTestimonios ? isTestimoniosActive : isPrecios ? isPreciosActive : false;
 
         return (
           <>
@@ -132,7 +135,7 @@ const activeSlug = courseSlugs.find((slug) => pathname.includes(`/cursos/${slug}
                 href={targetHref}
                 class:list={[
                   "block font-display text-4xl tracking-tight transition-colors hover:text-teal-300",
-                  isTestimoniosActive ? "text-teal-300 font-bold" : "font-semibold text-pearl"
+                  isLinkActive && !("children" in link && link.children) ? "text-teal-300 font-bold" : ("children" in link && link.children) ? "font-semibold text-pearl" : "font-semibold text-pearl"
                 ]}
                 style={`transition-delay: ${i * 40}ms`}
               >
@@ -148,20 +151,6 @@ const activeSlug = courseSlugs.find((slug) => pathname.includes(`/cursos/${slug}
                 </div>
               )}
             </div>
-            {false && link.label === "Cursos" && (activeSlug || pathname.includes("/toefl-ibt")) && (
-              <div>
-                <a
-                  href={`/cursos/${activeSlug || "toefl-ibt"}/precios`}
-                  class:list={[
-                    "block font-display text-4xl tracking-tight transition-colors hover:text-teal-300",
-                    pathname.includes("/precios") ? "text-teal-300 font-bold" : "font-semibold text-pearl"
-                  ]}
-                  style={`transition-delay: 20ms`}
-                >
-                  Precios
-                </a>
-              </div>
-            )}
           </>
         );
       })}

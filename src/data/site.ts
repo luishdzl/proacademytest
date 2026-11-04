@@ -42,20 +42,13 @@ export const METRICS = [
 
 export const NAV_LINKS = [
   { label: "Cursos", href: "/cursos", children: [
-    { label: "TOEFL iBT", href: "/cursos/toefl-ibt" },
-    { label: "SAT", href: "/cursos/sat" },
-    { label: "GRE", href: "/cursos/gre" },
-    { label: "GMAT", href: "/cursos/gmat" },
-    { label: "PAA", href: "/cursos/paa" },
+    { label: "TOEFL iBT", href: "/toefl-ibt" },
+    { label: "SAT", href: "/sat" },
+    { label: "GRE", href: "/gre" },
+    { label: "GMAT", href: "/gmat" },
+    { label: "PAA", href: "/paa" },
   ]},
-  { label: "Precios", href: "/precios", children: [
-    { label: "Todos los cursos", href: "/precios" },
-    { label: "TOEFL iBT", href: "/cursos/toefl-ibt/precios" },
-    { label: "SAT", href: "/cursos/sat/precios" },
-    { label: "GRE", href: "/cursos/gre/precios" },
-    { label: "GMAT", href: "/cursos/gmat/precios" },
-    { label: "PAA", href: "/cursos/paa/precios" },
-  ]},
+  { label: "Precios", href: "/precios" },
   { label: "Testimonios", href: "/testimonios" },
   { label: "Blog", href: "/blog" },
   { label: "FAQ", href: "/preguntas-frecuentes" },

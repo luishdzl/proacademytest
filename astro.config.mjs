@@ -13,12 +13,32 @@ import recoveredBlogRedirects from "./src/data/recovered-blog-redirects.mjs";
 // Preserves SEO for the posts already indexed at the root of proacademymx.com.
 // Targets use the trailing slash that Netlify serves with 200, so old URLs
 // resolve in a single hop instead of chaining two 301s.
+// Course redirects to new URL structure
+const courseRedirects = {
+  "/cursos/toefl-ibt": "/toefl-ibt/",
+  "/cursos/sat": "/sat/",
+  "/cursos/gre": "/gre/",
+  "/cursos/gmat": "/gmat/",
+  "/cursos/paa": "/paa/",
+  "/cursos/toefl-ibt/precios": "/toefl-ibt/precio/",
+  "/cursos/sat/precios": "/sat/precio/",
+  "/cursos/gre/precios": "/gre/precio/",
+  "/cursos/gmat/precios": "/gmat/precio/",
+  "/cursos/paa/precios": "/paa/precio/",
+  "/cursos/toefl-ibt/testimonios": "/toefl-ibt/testimonios/",
+  "/cursos/sat/testimonios": "/sat/testimonios/",
+  "/cursos/gre/testimonios": "/gre/testimonios/",
+  "/cursos/gmat/testimonios": "/gmat/testimonios/",
+  "/cursos/paa/testimonios": "/paa/testimonios/",
+};
+
 const finalUrl = (target) =>
   target.startsWith("/") && !target.endsWith("/") && !/\.[a-z0-9]+$/i.test(target)
     ? `${target}/`
     : target;
 
 const legacyRedirects = {
+  ...courseRedirects,
   ...Object.fromEntries(
     Object.entries(recoveredBlogRedirects).map(([from, to]) => [from, finalUrl(to)])
   ),
