@@ -3,12 +3,12 @@ import Base from "@/layouts/Base.astro";
 import FinalCTA from "@/components/home/FinalCTA.astro";
 import WhyChooseUs from "@/components/home/WhyChooseUs.astro";
 import { TESTIMONIALS } from "@/data/testimonials";
-import { PROGRAMS } from "@/data/programs";
+import { MIGRATED_COURSE_SLUGS, PROGRAMS } from "@/data/programs";
 import { SITE } from "@/data/site";
 import { breadcrumbSchema } from "@/lib/schema";
 
 export function getStaticPaths() {
-  return PROGRAMS.map((program) => ({
+  return PROGRAMS.filter((p) => !MIGRATED_COURSE_SLUGS.has(p.slug)).map((program) => ({
     params: { slug: program.slug },
     props: { program },
   }));

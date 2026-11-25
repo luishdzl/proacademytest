@@ -1,7 +1,7 @@
 ---
 import { Icon } from "astro-icon/components";
 import { SITE } from "@/data/site";
-import { PROGRAMS } from "@/data/programs";
+import { PROGRAMS, coursePath } from "@/data/programs";
 
 const year = new Date().getFullYear();
 const socials = [
@@ -44,7 +44,7 @@ const socials = [
         <ul class="mt-5 space-y-3">
           {PROGRAMS.map((p) => (
             <li>
-              <a href={`/cursos/${p.slug}`} class="inline-block py-0.5 text-sm text-pearl-dim transition-colors hover:text-teal-300">
+              <a href={coursePath(p.slug)} class="inline-block py-0.5 text-sm text-pearl-dim transition-colors hover:text-teal-300">
                 Curso {p.exam}
               </a>
             </li>

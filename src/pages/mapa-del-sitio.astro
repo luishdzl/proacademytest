@@ -1,6 +1,6 @@
 ---
 import Base from "@/layouts/Base.astro";
-import { PROGRAMS } from "@/data/programs";
+import { PROGRAMS, coursePath } from "@/data/programs";
 import { CATEGORIES } from "@/data/categories";
 import { SITE } from "@/data/site";
 import { breadcrumbSchema } from "@/lib/schema";
@@ -13,7 +13,7 @@ const groups = [
     title: "Cursos",
     links: [
       { label: "Todos los cursos", href: "/cursos" },
-      ...PROGRAMS.map((p) => ({ label: `Curso ${p.exam}`, href: `/cursos/${p.slug}` })),
+      ...PROGRAMS.map((p) => ({ label: `Curso ${p.exam}`, href: coursePath(p.slug) })),
     ],
   },
   {

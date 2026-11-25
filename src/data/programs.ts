@@ -501,6 +501,7 @@ export const PROGRAMS: Program[] = [
     examSections: [
       {
         name: "Lectura",
+        label: "Comprensión Lectora",
         description:
           "Comprensión profunda de textos literarios, humanísticos y científicos. Preguntas basadas en evidencia, inferencia de ideas centrales y vocabulario en contexto.",
         time: "~45 min",
@@ -565,3 +566,16 @@ export const PROGRAMS: Program[] = [
 
 export const getProgram = (slug: string) =>
   PROGRAMS.find((p) => p.slug === slug);
+
+/**
+ * Cursos cuya landing ya vive en la URL corta `/{slug}/`. Los redirects 301
+ * están definidos en `astro.config.mjs` para los 5 cursos; al añadir un slug
+ * aquí se dejan de generar sus páginas bajo `/cursos/` (evitando duplicados)
+ * y los enlaces internos apuntan a la URL nueva vía `coursePath()`.
+ */
+export const MIGRATED_COURSE_SLUGS: ReadonlySet<string> = new Set(["toefl-ibt"]);
+
+/** Ruta pública de la landing de un curso. */
+export function coursePath(slug: string): string {
+  return MIGRATED_COURSE_SLUGS.has(slug) ? `/${slug}` : `/cursos/${slug}`;
+}

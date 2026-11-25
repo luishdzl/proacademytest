@@ -2,6 +2,7 @@
 // Hero — Pantalla completa fotorrealista premium.
 // Copy a la izquierda + selector de examen. La foto ocupa todo el lienzo.
 import HeroBackgroundCarousel from "@/components/react/HeroBackgroundCarousel.tsx";
+import { coursePath } from "@/data/programs";
 
 const EXAMS = [
   { label: "TOEFL iBT", slug: "toefl-ibt" },
@@ -50,7 +51,7 @@ const EXAMS = [
         <div class="mt-4 flex flex-wrap gap-2.5">
           {EXAMS.map((exam) => (
             <a
-              href={`/cursos/${exam.slug}`}
+              href={coursePath(exam.slug)}
               class="exam-pill group relative inline-flex items-center justify-center rounded-full border border-white/10 bg-[#151515] px-6 py-2.5 font-display text-[15px] font-semibold text-white transition-all duration-300 hover:border-teal-400 hover:bg-teal-400 hover:text-ink-950"
               data-magnetic
               data-event="hero_exam_select"

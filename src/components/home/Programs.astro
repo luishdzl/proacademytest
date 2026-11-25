@@ -1,5 +1,5 @@
 ---
-import { PROGRAMS } from "@/data/programs";
+import { PROGRAMS, coursePath } from "@/data/programs";
 ---
 
 <section
@@ -42,7 +42,7 @@ import { PROGRAMS } from "@/data/programs";
                   </span>
                 </button>
                 <a
-                  href={`/cursos/${p.slug}`}
+                  href={coursePath(p.slug)}
                   class="exam-go grid size-11 shrink-0 place-items-center rounded-full hairline-dim text-pearl transition-all duration-300 group-hover:border-teal-400 group-hover:bg-teal-400 group-hover:text-ink-950 before:absolute before:inset-0 before:z-30"
                   aria-label={`Ver curso ${p.exam}`}
                   data-event="program_row_click"
