@@ -35,9 +35,7 @@ const courseRedirects = {
 // Las estructuras antiguas ya no se usan: cualquier enlace residual vuelve al inicio.
 const hiddenPageRedirects = {
   "/cursos": "/",
-  "/cursos/": "/",
   "/precios": "/",
-  "/precios/": "/",
 };
 
 const finalUrl = (target) =>
