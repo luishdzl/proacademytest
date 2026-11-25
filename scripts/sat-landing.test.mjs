@@ -37,7 +37,7 @@ function setup(response = async () => ({ ok: true, json: async () => ({ success:
   };
   const calls = [], events = [];
   vm.runInNewContext(`const isSat = true, exam = 'SAT', whatsapp = '15555550100';\n${script}`, {
-    document, window: { location: { href: 'http://local.test/cursos/sat' }, dataLayer: events },
+    document, window: { location: { href: 'http://local.test/sat' }, dataLayer: events },
     FormData: class { constructor(f) { this.values = f.values; } get(key) { return this.values[key]; } },
     AbortController, setTimeout, clearTimeout,
     fetch: (...args) => { calls.push(args); return response(...args); },

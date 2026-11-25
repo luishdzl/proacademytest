@@ -11,7 +11,7 @@ test('public rendering resolves known course links and retains original heading 
   const input='<h2 class="wp-block-heading" id="old-anchor" title="Heading">Section</h2><a href="https://cms.proacademymx.com/paa/?x=1#part">PAA</a><a href="https://other.example/paa/">External</a>';
   assert.deepEqual(extractHeadings(input),[{depth:2,slug:'old-anchor',text:'Section'}]);
   const output=publicBlogLinks(input);
-  assert.ok(output.includes('https://proacademymx.com/cursos/paa?x=1#part'));
+  assert.ok(output.includes('https://proacademymx.com/paa?x=1#part'));
   assert.ok(output.includes('https://other.example/paa/'));
   assert.equal(publicBlogLinks('<a href="https://cms.proacademymx.com/unknown">Keep</a>'),'<a href="https://cms.proacademymx.com/unknown">Keep</a>');
 });

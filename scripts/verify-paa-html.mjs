@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 
-const response = await fetch('http://localhost:4321/cursos/paa');
+const response = await fetch('http://localhost:4321/paa');
 if (!response.ok) {
   console.error('Failed to fetch:', response.status);
   process.exit(1);

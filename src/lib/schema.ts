@@ -1,5 +1,5 @@
 import { SITE } from "@/data/site";
-import type { Program } from "@/data/programs";
+import { coursePath, type Program } from "@/data/programs";
 
 const ORG_ID = `${SITE.url}/#organization`;
 
@@ -67,10 +67,10 @@ export function websiteSchema() {
 export function courseSchema(program: Program) {
   return {
     "@type": "Course",
-    "@id": `${SITE.url}/cursos/${program.slug}/#course`,
+    "@id": `${SITE.url}${coursePath(program.slug)}/#course`,
     name: `Curso ${program.exam} | ${SITE.name}`,
     description: program.description,
-    url: `${SITE.url}/cursos/${program.slug}`,
+    url: `${SITE.url}${coursePath(program.slug)}`,
     provider: { "@id": ORG_ID },
     inLanguage: "es-MX",
     offers: {
@@ -78,7 +78,7 @@ export function courseSchema(program: Program) {
       price: program.priceMXN,
       priceCurrency: "MXN",
       availability: "https://schema.org/InStock",
-      url: `${SITE.url}/cursos/${program.slug}`,
+      url: `${SITE.url}${coursePath(program.slug)}`,
       category: "Paid",
     },
     hasCourseInstance: {

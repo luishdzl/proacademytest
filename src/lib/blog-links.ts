@@ -3,12 +3,12 @@
 const cmsPaths: Record<string, string> = {
   "/": "/",
   "/blog": "/blog",
-  "/paa": "/cursos/paa",
-  "/paa-college-board": "/cursos/paa",
-  "/toefl-ibt": "/cursos/toefl-ibt",
-  "/sat": "/cursos/sat",
-  "/gmat": "/cursos/gmat",
-  "/gre": "/cursos/gre",
+  "/paa": "/paa",
+  "/paa-college-board": "/paa",
+  "/toefl-ibt": "/toefl-ibt",
+  "/sat": "/sat",
+  "/gmat": "/gmat",
+  "/gre": "/gre",
 };
 
 export function publicBlogLinks(html: string): string {

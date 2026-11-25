@@ -16,7 +16,7 @@ async function measure(send, url, sel){
   ws.onmessage=(ev)=>{const m=JSON.parse(ev.data); if(m.id&&pend.has(m.id)){pend.get(m.id)(m.result);pend.delete(m.id);}};
   const send=(method,params={})=>new Promise(r=>{const mid=++id;pend.set(mid,r);ws.send(JSON.stringify({id:mid,method,params}));});
   await send("Runtime.enable");
-  console.log("=== TOEFL [slug] ==="); console.log(await measure(send,"http://localhost:4321/cursos/toefl-ibt/?v="+Date.now()));
-  console.log("=== PRECIOS ==="); console.log(await measure(send,"http://localhost:4321/cursos/toefl-ibt/precios/?v="+Date.now()));
+  console.log("=== TOEFL [slug] ==="); console.log(await measure(send,"http://localhost:4321/toefl-ibt/?v="+Date.now()));
+  console.log("=== PRECIOS ==="); console.log(await measure(send,"http://localhost:4321/toefl-ibt/precio/?v="+Date.now()));
   ws.close(); setTimeout(()=>process.exit(0),200);
 })();

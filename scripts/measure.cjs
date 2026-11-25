@@ -9,7 +9,7 @@ const getJSON = (url) => new Promise((res, rej) => { const q = http.get(url, (r)
   ws.onmessage=(ev)=>{const m=JSON.parse(ev.data); if(m.id&&pend.has(m.id)){pend.get(m.id)(m.result);pend.delete(m.id);}};
   const send=(method,params={})=>new Promise(r=>{const mid=++id;pend.set(mid,r);ws.send(JSON.stringify({id:mid,method,params}));});
   await send("Runtime.enable");
-  await send("Page.navigate", { url: "http://localhost:4321/cursos/toefl-ibt/precios/?v="+Date.now() });
+  await send("Page.navigate", { url: "http://localhost:4321/toefl-ibt/precio/?v="+Date.now() });
   await new Promise(r=>setTimeout(r,6000));
   const expr = `(()=>{
     const out={};

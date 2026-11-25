@@ -573,7 +573,13 @@ export const getProgram = (slug: string) =>
  * aquí se dejan de generar sus páginas bajo `/cursos/` (evitando duplicados)
  * y los enlaces internos apuntan a la URL nueva vía `coursePath()`.
  */
-export const MIGRATED_COURSE_SLUGS: ReadonlySet<string> = new Set(["toefl-ibt"]);
+export const MIGRATED_COURSE_SLUGS: ReadonlySet<string> = new Set([
+  "toefl-ibt",
+  "sat",
+  "gre",
+  "gmat",
+  "paa",
+]);
 
 /** Ruta pública de la landing de un curso. */
 export function coursePath(slug: string): string {
