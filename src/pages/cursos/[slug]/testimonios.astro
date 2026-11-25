@@ -30,7 +30,7 @@ const courseTestimonials = TESTIMONIALS.filter((t) => {
   description={`Historias reales de alumnos que alcanzaron su puntaje objetivo en el examen ${program.exam} con Professional Academy.`}
   schema={[breadcrumbSchema([
     { name: "Inicio", url: SITE.url },
-    { name: "Cursos", url: `${SITE.url}/cursos` },
+    { name: "Cursos", url: `${SITE.url}/#programas` },
     { name: program.exam, url: `${SITE.url}/cursos/${program.slug}` },
     { name: "Testimonios", url: `${SITE.url}/cursos/${program.slug}/testimonios` },
   ])]}

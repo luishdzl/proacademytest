@@ -12,7 +12,6 @@ const groups = [
   {
     title: "Cursos",
     links: [
-      { label: "Todos los cursos", href: "/cursos" },
       ...PROGRAMS.map((p) => ({ label: `Curso ${p.exam}`, href: coursePath(p.slug) })),
     ],
   },
@@ -20,7 +19,6 @@ const groups = [
     title: "Navegación",
     links: [
       { label: "Inicio", href: "/" },
-      { label: "Precios", href: "/precios" },
       { label: "Testimonios", href: "/testimonios" },
       { label: "Blog", href: "/blog" },
       { label: "Preguntas frecuentes", href: "/preguntas-frecuentes" },

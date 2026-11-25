@@ -32,6 +32,14 @@ const courseRedirects = {
   "/cursos/paa/testimonios": "/paa/testimonios/",
 };
 
+// Las estructuras antiguas ya no se usan: cualquier enlace residual vuelve al inicio.
+const hiddenPageRedirects = {
+  "/cursos": "/",
+  "/cursos/": "/",
+  "/precios": "/",
+  "/precios/": "/",
+};
+
 const finalUrl = (target) =>
   target.startsWith("/") && !target.endsWith("/") && !/\.[a-z0-9]+$/i.test(target)
     ? `${target}/`
@@ -39,6 +47,7 @@ const finalUrl = (target) =>
 
 const legacyRedirects = {
   ...courseRedirects,
+  ...hiddenPageRedirects,
   ...Object.fromEntries(
     Object.entries(recoveredBlogRedirects).map(([from, to]) => [from, finalUrl(to)])
   ),

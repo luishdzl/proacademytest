@@ -3,7 +3,8 @@ import { NAV_LINKS } from "@/data/site";
 const pathname = Astro.url.pathname;
 
 const courseSlugs = ["toefl-ibt", "sat", "gre", "gmat", "paa"];
-const activeSlug = courseSlugs.find((slug) => pathname.includes(`/cursos/${slug}`) || pathname === `/${slug}` || pathname.startsWith(`/${slug}/`));
+const activeSlug = courseSlugs.find((slug) => pathname === `/${slug}` || pathname.startsWith(`/${slug}/`));
+const priceHref = activeSlug ? `/${activeSlug}/precio/` : null;
 ---
 
 <header
@@ -24,45 +25,38 @@ const activeSlug = courseSlugs.find((slug) => pathname.includes(`/cursos/${slug}
       <ul class="hidden items-center gap-2 lg:flex">
         {NAV_LINKS.map((link) => {
           const isTestimonios = link.label === "Testimonios";
-          const isPrecios = link.label === "Precios";
-          let targetHref = "href" in link ? link.href : "#";
-          if (isTestimonios && activeSlug) {
-            targetHref = `/${activeSlug}/testimonios`;
-          } else if (isPrecios && activeSlug) {
-            targetHref = `/${activeSlug}/precio`;
-          }
-          const isTestimoniosActive = isTestimonios && (pathname === "/testimonios" || (activeSlug && (pathname.includes(`/${activeSlug}/testimonios`) || pathname.includes(`/cursos/${activeSlug}/testimonios`))));
-          const isPreciosActive = isPrecios && pathname.includes("/precio");
-          const isLinkActive = isTestimonios ? isTestimoniosActive : isPrecios ? isPreciosActive : false;
+          const targetHref = isTestimonios && activeSlug ? `/${activeSlug}/testimonios/` : "href" in link ? link.href : "#";
+          const isLinkActive = isTestimonios && (pathname === "/testimonios" || (activeSlug && pathname.startsWith(`/${activeSlug}/testimonios`)));
 
           return (
             <>
               {"children" in link && link.children ? (
-                <li class="group relative">
-                  <a
-                    href={link.href}
-                    class="flex items-center gap-1.5 rounded-full px-4 py-2 font-display text-[15px] font-semibold text-pearl/80 transition-colors hover:text-teal-300"
-                    aria-haspopup="true"
-                  >
-                    {link.label}
-                    <svg class="size-3.5 transition-transform duration-300 group-hover:rotate-180" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                      <path d="M2.5 4.5 6 8l3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                    </svg>
-                  </a>
-                  <div class="invisible absolute left-1/2 top-full -translate-x-1/2 pt-3 opacity-0 transition-all duration-300 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
-                    <ul class="min-w-52 rounded-2xl p-2 bg-[#091412] border border-white/15 shadow-2xl shadow-black/90">
-                      {link.children.map((child) => (
-                        <li>
-                          <a
-                            href={child.href}
-                            class="block rounded-xl px-4 py-2.5 text-sm font-semibold text-pearl transition-colors hover:bg-teal-400/20 hover:text-[#00cfab]"
-                          >
-                            {child.label}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                <li class="relative">
+                  <details class="group">
+                    <summary
+                      class="flex cursor-pointer list-none items-center gap-1.5 rounded-full px-4 py-2 font-display text-[15px] font-semibold text-pearl/80 transition-colors hover:text-teal-300"
+                      aria-haspopup="true"
+                    >
+                      {link.label}
+                      <svg class="size-3.5 transition-transform duration-300 group-open:rotate-180" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                        <path d="M2.5 4.5 6 8l3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                      </svg>
+                    </summary>
+                    <div class="absolute left-1/2 top-full -translate-x-1/2 pt-3">
+                      <ul class="min-w-52 rounded-2xl p-2 bg-[#091412] border border-white/15 shadow-2xl shadow-black/90">
+                        {link.children.map((child) => (
+                          <li>
+                            <a
+                              href={child.href}
+                              class="block rounded-xl px-4 py-2.5 text-sm font-semibold text-pearl transition-colors hover:bg-teal-400/20 hover:text-[#00cfab]"
+                            >
+                              {child.label}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </details>
                 </li>
               ) : (
                 <li>
@@ -80,6 +74,19 @@ const activeSlug = courseSlugs.find((slug) => pathname.includes(`/cursos/${slug}
             </>
           );
         })}
+        {priceHref && (
+          <li>
+            <a
+              href={priceHref}
+              class:list={[
+                "rounded-full px-4 py-2 font-display text-[15px] transition-colors hover:text-teal-300",
+                pathname.includes("/precio") ? "text-teal-300 font-bold" : "font-semibold text-pearl/80"
+              ]}
+            >
+              Precios
+            </a>
+          </li>
+        )}
       </ul>
 
       <div class="flex items-center gap-3">
@@ -117,49 +124,66 @@ const activeSlug = courseSlugs.find((slug) => pathname.includes(`/cursos/${slug}
     <div class="container-edge flex min-h-full flex-col justify-center gap-2 py-24">
       {NAV_LINKS.map((link, i) => {
         const isTestimonios = link.label === "Testimonios";
-        const isPrecios = link.label === "Precios";
-        let targetHref = "href" in link ? link.href : "#";
-        if (isTestimonios && activeSlug) {
-          targetHref = `/${activeSlug}/testimonios`;
-        } else if (isPrecios && activeSlug) {
-          targetHref = `/${activeSlug}/precio`;
-        }
-        const isTestimoniosActive = isTestimonios && (pathname === "/testimonios" || (activeSlug && (pathname.includes(`/${activeSlug}/testimonios`) || pathname.includes(`/cursos/${activeSlug}/testimonios`))));
-        const isPreciosActive = isPrecios && pathname.includes("/precio");
-        const isLinkActive = isTestimonios ? isTestimoniosActive : isPrecios ? isPreciosActive : false;
+        const targetHref = isTestimonios && activeSlug ? `/${activeSlug}/testimonios/` : "href" in link ? link.href : "#";
+        const isLinkActive = isTestimonios && (pathname === "/testimonios" || (activeSlug && pathname.startsWith(`/${activeSlug}/testimonios`)));
 
         return (
           <>
             <div>
-              <a
-                href={targetHref}
-                class:list={[
-                  "block font-display text-4xl tracking-tight transition-colors hover:text-teal-300",
-                  isLinkActive && !("children" in link && link.children) ? "text-teal-300 font-bold" : ("children" in link && link.children) ? "font-semibold text-pearl" : "font-semibold text-pearl"
-                ]}
-                style={`transition-delay: ${i * 40}ms`}
-              >
-                {link.label}
-              </a>
-              {"children" in link && link.children && (
-                <div class="mt-2 flex flex-wrap gap-x-5 gap-y-1 pl-1">
-                  {link.children.map((child) => (
-                    <a href={child.href} class="font-display text-base font-medium text-ink-300 hover:text-teal-300">
-                      {child.label}
-                    </a>
-                  ))}
-                </div>
+              {"children" in link && link.children ? (
+                <details class="group">
+                  <summary
+                    class="flex cursor-pointer list-none items-center justify-between font-display text-4xl font-semibold tracking-tight text-pearl transition-colors hover:text-teal-300"
+                    style={`transition-delay: ${i * 40}ms`}
+                  >
+                    {link.label}
+                    <svg class="size-5 shrink-0 transition-transform duration-300 group-open:rotate-180" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                      <path d="M2.5 4.5 6 8l3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                  </summary>
+                  <div class="mt-2 flex flex-wrap gap-x-5 gap-y-1 pl-1">
+                    {link.children.map((child) => (
+                      <a href={child.href} class="font-display text-base font-medium text-ink-300 hover:text-teal-300">
+                        {child.label}
+                      </a>
+                    ))}
+                  </div>
+                </details>
+              ) : (
+                <a
+                  href={targetHref}
+                  class:list={[
+                    "block font-display text-4xl tracking-tight transition-colors hover:text-teal-300",
+                    isLinkActive ? "text-teal-300 font-bold" : "font-semibold text-pearl"
+                  ]}
+                  style={`transition-delay: ${i * 40}ms`}
+                >
+                  {link.label}
+                </a>
               )}
             </div>
           </>
         );
       })}
+      {priceHref && (
+        <a
+          href={priceHref}
+          class:list={[
+            "block font-display text-4xl tracking-tight transition-colors hover:text-teal-300",
+            pathname.includes("/precio") ? "text-teal-300 font-bold" : "font-semibold text-pearl"
+          ]}
+        >
+          Precios
+        </a>
+      )}
       <a href="/contacto" class="btn-primary mt-8 self-start">Evaluación gratis</a>
     </div>
   </div>
 </header>
 
 <style>
+  summary { list-style: none; }
+  summary::-webkit-details-marker { display: none; }
   #nav-shell {
     background: rgb(10 16 16 / 0.92);
     border: 1px solid rgb(247 250 249 / 0.09);

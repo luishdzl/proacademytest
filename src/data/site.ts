@@ -41,14 +41,13 @@ export const METRICS = [
 ] as const;
 
 export const NAV_LINKS = [
-  { label: "Cursos", href: "/cursos", children: [
+  { label: "Cursos", children: [
     { label: "TOEFL iBT", href: "/toefl-ibt" },
     { label: "SAT", href: "/sat" },
     { label: "GRE", href: "/gre" },
     { label: "GMAT", href: "/gmat" },
     { label: "PAA", href: "/paa" },
   ]},
-  { label: "Precios", href: "/precios" },
   { label: "Testimonios", href: "/testimonios" },
   { label: "Blog", href: "/blog" },
   { label: "FAQ", href: "/preguntas-frecuentes" },

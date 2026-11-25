@@ -81,7 +81,7 @@ const schema = [
   faqSchema(program.faqs),
   breadcrumbSchema([
     { name: "Inicio", url: SITE.url },
-    { name: "Cursos", url: `${SITE.url}/cursos` },
+    { name: "Cursos", url: `${SITE.url}/#programas` },
     { name: program.exam, url: `${SITE.url}/cursos/${program.slug}` },
   ]),
 ];
@@ -98,7 +98,7 @@ const schema = [
         <nav aria-label="Ruta de navegación" class="font-mono text-[11px] tracking-[0.18em] text-ink-400 uppercase">
           <a href="/" class="transition-colors hover:text-teal-300">Inicio</a>
           <span aria-hidden="true"> / </span>
-          <a href="/cursos" class="transition-colors hover:text-teal-300">Cursos</a>
+          <a href="/#programas" class="transition-colors hover:text-teal-300">Cursos</a>
           <span aria-hidden="true"> / </span>
           <span class="text-teal-400">{program.exam}</span>
         </nav>
