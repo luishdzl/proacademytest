@@ -3,7 +3,7 @@ import { Icon } from "astro-icon/components";
 import Base from "@/layouts/Base.astro";
 import FAQList from "@/components/FAQList.astro";
 import HourPricePicker from "@/components/HourPricePicker.astro";
-import { PAA_HOUR_PACKAGES, PAA_ESSENTIAL_PRICE_MXN } from "@/data/hour-packages";
+import { PAA_HOUR_PACKAGES, TOEFL_HOUR_PACKAGES, PAA_ESSENTIAL_PRICE_MXN } from "@/data/hour-packages";
 import { MIGRATED_COURSE_SLUGS, PROGRAMS } from "@/data/programs";
 import { SITE } from "@/data/site";
 import { breadcrumbSchema, faqSchema } from "@/lib/schema";
@@ -34,7 +34,7 @@ interface Tier {
   priceUnit: string;
   includesTitle: string;
   features: Feature[];
-  guarantee: string;
+  guarantee?: string;
   dark?: boolean;
   lightGreen?: boolean;
   recommended?: boolean;
@@ -43,60 +43,6 @@ interface Tier {
   isInteractive?: boolean;
   hidden?: boolean;
 }
-
-const tiers: Tier[] = [
-  {
-    name: "Pro Essentials",
-    description: "Para estudiantes disciplinados que buscan material de alta calidad.",
-    priceNote: "Pago único, acceso por 6 meses",
-    price: "$2,200",
-    priceUnit: "MXN",
-    includesTitle: "¿Qué incluye este plan?",
-    features: [
-      "Acceso a la plataforma digital",
-      "+10 exámenes de simulación",
-      "Tutor de IA Integrado",
-      "+2,000 preguntas de práctica",
-      "Lecciones en video",
-    ],
-    guarantee: "Si logras menos del 80% de tu puntaje objetivo, te devolvemos tu dinero.",
-  },
-  {
-    name: "Pro Advanced",
-    recommended: true,
-    description: "Evalúa tu nivel y trabaja en tus debilidades con la ayuda de nuestros expertos.",
-    priceNote: "A partir de 5 horas por:",
-    price: "$3,490",
-    priceUnit: "MXN",
-    includesTitle: "Incluye todo del plan Essentials, más:",
-    features: [
-      "Diagnóstico de tu nivel",
-      "Plan de estudio personalizado",
-      { label: "Clases 1:1 en vivo", note: "Contrata horas extra si lo necesitas" },
-      "20 exámenes de simulación",
-      "Horarios flexibles adaptables",
-    ],
-    guarantee: "Si logras menos del 85% de tu puntaje objetivo, te devolvemos tu dinero.",
-  },
-  {
-    name: "Pro Plus",
-    dark: true,
-    description: "Programa intensivo con acompañamiento constante para resultados garantizados.",
-    priceNote: "A partir de:",
-    price: "$14,990",
-    priceUnit: "/MXN",
-    tag: ["Paga de contado", "Ahorra 15%"],
-    includesTitle: "Incluye todo del plan Advanced, más:",
-    features: [
-      "20 horas de clase en vivo 1:1",
-      "Maestros certificados",
-      "Retroalimentación detallada",
-      "Kit de estrategia para el día del examen",
-    ],
-    guarantee: "Si logras menos del 90% de tu puntaje objetivo, te rembolsamos el 100% de tu dinero.",
-    students: "+1,500",
-  },
-];
 
 const paaTiers: Tier[] = [
   {
@@ -171,20 +117,27 @@ const paaTiers: Tier[] = [
   }
 ];
 
-// Herón confirmed SAT uses PAA tariffs and the existing four hour packages.
-// Clone SAT content so its guarantee and wording never mutate PAA.
-const isSat = program.slug === "sat";
+// Todos los cursos comparten la tarifa de PAA; se clonan los planes para que la garantia
+// y los textos de cada curso nunca modifiquen los de PAA.
 const isPaa = program.slug === "paa";
-const satTiers: Tier[] = paaTiers.map((tier) => ({
+const isToefl = program.slug === "toefl-ibt";
+const hourPackages = isToefl ? TOEFL_HOUR_PACKAGES : PAA_HOUR_PACKAGES;
+const courseTiers: Tier[] = paaTiers.map((tier) => ({
   ...tier,
   guarantee: program.guarantee,
-  features: tier.features.map((feature) =>
-    typeof feature !== "string" && feature.label === "Clases 1:1 en vivo"
-      ? { ...feature, note: "Elige 5, 10, 20 o 30 horas" }
-      : feature,
-  ),
+  // El Elite de TOEFL iBT equivale a 20 h y su Avanzado llega a 15 h (ver hour-packages.ts).
+  price: isToefl && tier.name === "Pro Élite" ? "$16,900" : tier.price,
+  features: tier.features.map((feature) => {
+    if (typeof feature !== "string" && feature.label === "Clases 1:1 en vivo") {
+      return { ...feature, note: isToefl ? "Elige 5, 10 o 15 horas" : "Elige 5, 10, 20 o 30 horas" };
+    }
+    if (isToefl && typeof feature === "string" && feature.startsWith("40 horas de clase en vivo")) {
+      return "20 horas de clase en vivo 1:1";
+    }
+    return feature;
+  }),
 }));
-const currentTiers = (isSat ? satTiers : isPaa ? paaTiers : tiers).filter((t) => !t.hidden);
+const currentTiers = (isPaa ? paaTiers : courseTiers).filter((t) => !t.hidden);
 
 const waLink = (plan: string) =>
   `https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent(
@@ -194,7 +147,7 @@ const waLink = (plan: string) =>
 const faqs = [
   {
     q: `¿Qué incluye el curso ${EXAM} de Professional Academy?`,
-    a: "Dependiendo del plan, tendrás acceso completo a la plataforma con simuladores idénticos al examen real, material oficial, +2,000 ejercicios para practicar, retroalimentación personalizada 1 a 1 y más de 20 horas de lecciones en video.",
+    a: "Dependiendo del plan, tendrás acceso a la plataforma digital, más de 5,000 preguntas de práctica, 20 exámenes de simulación y clases en vivo. Consulta los servicios incluidos en cada tarjeta.",
   },
   {
     q: "¿Qué nivel necesito para tomar estos cursos?",
@@ -202,19 +155,13 @@ const faqs = [
   },
   {
     q: "¿Por cuánto tiempo tengo acceso a la plataforma digital?",
-    a: "El plan Essentials incluye 6 meses de acceso. En los planes Advanced y Plus el acceso se mantiene durante todo tu programa de preparación, hasta la fecha de tu examen.",
+    a: "El plan Pro Esencial incluye 6 meses de acceso. En Pro Avanzado y Pro Élite, el acceso se mantiene durante tu programa de preparación, hasta la fecha de tu examen.",
   },
   {
     q: "¿Cómo funciona la garantía de puntaje?",
-    a: "Si al terminar tu curso y presentar el examen no alcanzas el porcentaje de tu puntaje objetivo indicado en tu plan, te reembolsamos tu inversión según lo estipulado. Aplican nuestros Términos y Condiciones.",
+    a: `${program.guarantee} Aplican nuestros Términos y Condiciones.`,
   },
 ];
-
-if (isSat || isPaa) {
-  faqs[0].a = "Dependiendo del plan, tendrás acceso a la plataforma digital, más de 5,000 preguntas de práctica, 20 exámenes de simulación y clases en vivo. Consulta los servicios incluidos en cada tarjeta.";
-  faqs[2].a = "El plan Pro Esencial incluye 6 meses de acceso. En Pro Avanzado y Pro Élite, el acceso se mantiene durante tu programa de preparación, hasta la fecha de tu examen.";
-  faqs[3].a = `${program.guarantee} Aplican nuestros Términos y Condiciones.`;
-}
 
 const schema = [
   faqSchema(faqs),
@@ -228,8 +175,8 @@ const schema = [
 ---
 
 <Base
-  title={`Precios del curso ${EXAM} | Professional Academy`}
-  description={`Elige tu modalidad de estudio para el ${EXAM}: ${isSat || isPaa ? "Pro Esencial, Pro Avanzado o Pro Élite" : "Pro Essentials, Pro Advanced o Pro Plus"}. Simuladores oficiales, clases 1 a 1 y Garantía de Puntaje.`}
+  title={`Precios del curso ${EXAM} | Planes y garantía`}
+  description={`Elige tu modalidad de estudio para el ${EXAM}: Pro Esencial, Pro Avanzado o Pro Élite. Simuladores oficiales, clases 1 a 1 y Garantía de Puntaje.`}
   schema={schema}
   stickyCta={false}
 >
@@ -242,13 +189,13 @@ const schema = [
       <div class="pp-hero">
         <div>
           <h1 class="font-display text-[clamp(2.75rem,5.6vw,4.6rem)] leading-[1.02] font-semibold tracking-[-0.03em] text-pearl" data-reveal-line>
-            <span class="line-mask"><span class="line-inner">La mejor opción</span></span>
+            <span class="line-mask"><span class="line-inner">Precios del curso</span></span>
             <span class="line-mask">
               <span class="line-inner">
                 {isPaa ? (
-                  <span class="text-[#00cfab]">para aprobar.</span>
+                  <span class="text-[#00cfab]">{EXAM}.</span>
                 ) : (
-                  <em class="font-display italic font-medium text-teal-400 pr-2">para aprobar.</em>
+                  <em class="font-display italic font-medium text-teal-400 pr-2">{EXAM}.</em>
                 )}
               </span>
             </span>
@@ -315,7 +262,7 @@ const schema = [
             <!-- Precio -->
             <div class="mt-5 min-h-[5.5rem] lg:min-h-[5.75rem] flex flex-row justify-between items-end">
               {t.isInteractive ? (
-                <HourPricePicker packages={PAA_HOUR_PACKAGES} exam={EXAM} note={t.priceNote} />
+                <HourPricePicker packages={hourPackages} exam={EXAM} note={t.priceNote} />
               ) : (
               <div class="flex flex-col justify-start w-full">
                 <p class:list={["text-[14px] font-medium", t.dark ? "text-ink-300" : "text-[#475569]"]}>{t.priceNote}</p>

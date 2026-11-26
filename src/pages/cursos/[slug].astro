@@ -3,10 +3,12 @@ import { Icon } from "astro-icon/components";
 import Base from "@/layouts/Base.astro";
 import FAQList from "@/components/FAQList.astro";
 import HourPricePicker from "@/components/HourPricePicker.astro";
-import { PAA_HOUR_PACKAGES, PAA_ESSENTIAL_PRICE_MXN } from "@/data/hour-packages";
-import { MIGRATED_COURSE_SLUGS, PROGRAMS } from "@/data/programs";
+import { PAA_HOUR_PACKAGES, TOEFL_HOUR_PACKAGES } from "@/data/hour-packages";
+import { getFigmaLanding } from "@/data/landing-figma";
+import { MIGRATED_COURSE_SLUGS, PROGRAMS, pricingPath, testimonialsPath } from "@/data/programs";
 import { SITE } from "@/data/site";
 import { TESTIMONIALS } from "@/data/testimonials";
+import { getPostsByCategory, getPublishedPosts } from "@/lib/blog";
 import { breadcrumbSchema, courseSchema, faqSchema } from "@/lib/schema";
 
 export function getStaticPaths() {
@@ -17,68 +19,92 @@ export function getStaticPaths() {
 }
 
 const { program } = Astro.props;
+const landing = getFigmaLanding(program.slug);
 const isSat = program.slug === "sat";
-const isPaa = program.slug === "paa";
-const isDecoupled = isSat || isPaa;
-
-const priceFormatted = new Intl.NumberFormat("es-MX", {
-  style: "currency",
-  currency: "MXN",
-  maximumFractionDigits: 0,
-}).format(program.priceMXN);
-
-const stats = isPaa
-  ? [
-      { text: "Clase 1 a 1", label: "Lecciones personalizadas" },
-      { value: 5000, prefix: "+", label: "Ejercicios prácticos" },
-      { value: 20, label: "Evaluaciones completas" },
-      { value: 150, prefix: "+", label: "Puntos garantizados" },
-    ]
-  : [
-      { value: program.sessions, label: "sesiones de clase" },
-      { value: program.exercises, label: "ejercicios prácticos", prefix: "+" },
-      { value: program.evaluations, label: "evaluaciones completas" },
-      { value: program.hours, label: "horas grabadas en HD", prefix: "+" },
-    ];
+const money = (amount: number) => `$${amount.toLocaleString("en-US")}`;
 
 const featureIcons = ["ph:book-open", "ph:clipboard-text", "ph:graduation-cap", "ph:seal-check"];
-const examIcons = isSat
-  ? ["ph:book-open", "ph:math-operations"]
-  : program.slug === "paa"
-    ? ["ph:book-open", "ph:pencil-simple", "ph:calculator", "ph:globe-hemisphere-west"]
-    : ["ph:book-open", "ph:headphones", "ph:pencil-simple", "ph:microphone"];
+const examIconsBySlug: Record<string, string[]> = {
+  sat: ["ph:book-open", "ph:math-operations"],
+  paa: ["ph:book-open", "ph:pencil-simple", "ph:calculator", "ph:globe-hemisphere-west"],
+  "piense-ii": ["ph:target", "ph:book-open", "ph:calculator", "ph:globe-hemisphere-west"],
+  act: ["ph:globe-hemisphere-west", "ph:calculator", "ph:book-open", "ph:target", "ph:pencil-simple-line"],
+  gre: ["ph:pencil-simple", "ph:book-open", "ph:calculator", "ph:stack"],
+  gmat: ["ph:chart-line-up", "ph:book-open", "ph:calculator", "ph:lightning"],
+};
+const examIcons = examIconsBySlug[program.slug] ?? ["ph:book-open", "ph:headphones", "ph:pencil-simple", "ph:microphone"];
 const academicIntro = program.academicIntro ?? program.audience;
-const examShort = program.exam.split(" ")[0];
 
-const comparison = program.comparison ?? [
-  { label: "Precio total", pa: priceFormatted, trad: "+$30,000" },
-  { label: "Duración del curso", pa: `${program.hours} horas`, trad: "8 semanas" },
-  { label: "Preguntas de práctica", pa: `más de ${program.exercises.toLocaleString("es-MX")}`, trad: "Libro limitado" },
-  { label: "Calificación de ensayos", pa: "Evaluación profesional", trad: "Inteligencia artificial" },
-  { label: "Garantía de puntuación", pa: "+15 puntos", trad: "Varía" },
-  { label: `Simuladores ${examShort}`, pa: "Incluidos", trad: "Varía" },
-];
-
-const benefits = program.benefits ?? [
-  "Recibe retroalimentación en clases particulares",
-  "Estudia con materiales y simuladores actualizados",
-  "Planes flexibles, cuando y donde quieras",
-  "Obtén el puntaje que necesitas… ¡garantizado!",
-];
-
-// Beneficios laterales en sección de precios PAA (Figma)
-const paaPriceBenefits = [
+const priceBenefits = [
   "Recibe retroalimentación en clases 1 a 1",
   "Estudia con materiales y simuladores actuales",
   "Planes flexibles, cuando y donde quieras",
   "Obtén el puntaje que necesitas... ¡garantizado!",
 ];
 
-const paaTestimonials = TESTIMONIALS.filter((t) => t.program.toUpperCase() === "PAA");
+type PlanFeature = string | { label: string; note: string };
+const plans: {
+  essentialPrice: string;
+  essential: PlanFeature[];
+  advanced: PlanFeature[];
+  elitePrice: string;
+  eliteBefore: string;
+  elite: PlanFeature[];
+} = {
+  essentialPrice: "$2,490",
+  essential: [
+    "Acceso a la plataforma digital",
+    "+20 exámenes de simulación",
+    "Tutor de IA Integrado",
+    "+5,000 preguntas de práctica",
+    "Lecciones en video",
+  ],
+  advanced: [
+    "Diagnóstico de tu nivel",
+    "Plan de estudio personalizado",
+    { label: "Clases 1:1 en vivo", note: program.slug === "toefl-ibt" ? "5 a 15 h (ajustable según diagnóstico)" : "10 a 20 h (ajustable según diagnóstico)" },
+    "Horarios flexibles adaptables",
+  ],
+  elitePrice: landing.elitePrice ?? "$24,650",
+  eliteBefore: landing.eliteBefore ?? "$29,000",
+  elite: [
+    `${landing.eliteHours ?? 40} horas de clase en vivo 1:1`,
+    "Maestros certificados",
+    "Retroalimentación detallada",
+    "Kit de estrategia para el día del examen",
+  ],
+};
+
+const blogCategoryByCourse: Record<string, string> = { "toefl-ibt": "toefl", "piense-ii": "admisiones", act: "admisiones" };
+const examKeyword = program.exam.toLowerCase().split(/[\s-]/)[0];
+const allPosts = await getPublishedPosts();
+const candidates = [
+  ...(await getPostsByCategory(blogCategoryByCourse[program.slug] ?? program.slug)),
+  ...allPosts.filter((p) => `${p.data.title} ${p.data.description}`.toLowerCase().includes(examKeyword)),
+  ...(await getPostsByCategory("admisiones")),
+  ...(await getPostsByCategory("universidades")),
+  ...(await getPostsByCategory("consejos-de-estudio")),
+];
+const relatedPosts = [...new Map(candidates.map((p) => [p.id, p])).values()].slice(0, 3);
+
+// Preguntas de costo y modalidad: cubren búsquedas de compra y alimentan el FAQPage.
+const faqs = [
+  ...program.faqs,
+  {
+    q: `¿Cuánto cuesta el curso ${program.exam}?`,
+    a: `Los planes del curso ${program.exam} van de ${money(program.priceFromMXN ?? program.priceMXN)} a ${money(program.priceToMXN ?? program.priceMXN)} MXN, según el plan y las horas de clase 1 a 1 que elijas. Consulta el detalle en la página de precios.`,
+  },
+  {
+    q: "¿Las clases son en línea y con horarios flexibles?",
+    a: "Sí. Las clases 1 a 1 son en vivo y en línea, y los horarios se adaptan a tu disponibilidad.",
+  },
+];
+
+const courseTestimonials = TESTIMONIALS.filter((t) => t.program.toUpperCase() === landing.testimonialKey);
 
 const schema = [
   courseSchema(program),
-  faqSchema(program.faqs),
+  faqSchema(faqs),
   breadcrumbSchema([
     { name: "Inicio", url: SITE.url },
     { name: "Cursos", url: `${SITE.url}/#programas` },
@@ -93,8 +119,8 @@ const schema = [
   <section class="course-hero relative overflow-hidden hairline-b-dim" style="background-color: rgb(6 10 10)">
     <div class="pointer-events-none absolute -right-32 top-0 h-[34rem] w-[34rem] rounded-full bg-teal-600/12 blur-[130px]" aria-hidden="true"></div>
 
-    <div class:list={["container-edge relative pb-16", isPaa ? "pt-36 lg:pt-40 lg:min-h-[45rem] lg:pb-14" : "pt-36 lg:min-h-[42rem] lg:pb-0"]}>
-      <div class:list={["relative z-10", isPaa ? "max-w-2xl lg:max-w-[55%] xl:max-w-[58%] lg:pt-4" : "max-w-xl lg:max-w-[49%] lg:pt-12"]}>
+    <div class="container-edge relative pb-16 pt-36 lg:pt-40 lg:min-h-[45rem] lg:pb-14">
+      <div class="relative z-10 max-w-2xl lg:max-w-[55%] xl:max-w-[58%] lg:pt-4">
         <nav aria-label="Ruta de navegación" class="font-mono text-[11px] tracking-[0.18em] text-ink-400 uppercase">
           <a href="/" class="transition-colors hover:text-teal-300">Inicio</a>
           <span aria-hidden="true"> / </span>
@@ -103,107 +129,80 @@ const schema = [
           <span class="text-teal-400">{program.exam}</span>
         </nav>
 
-        {isPaa ? (
-          <div class="mt-5">
-            <h1 class="font-display text-[clamp(2.5rem,5.2vw,4.25rem)] leading-[1.08] font-semibold tracking-[-0.03em] text-pearl">
-              Curso PAA<br />
-              College Board<br />
-              <span class="text-[#00cfab]">¡garantizado!</span>
-            </h1>
-            <p class="mt-6 max-w-lg text-[17px] leading-relaxed text-ink-300">
-              Clases en vivo 1 a 1, simuladores reales y profesores expertos para asegurar tu lugar en la UDG, El Tec de Monterrey y la UDEM.
-            </p>
-          </div>
-        ) : (
-          <div>
-            <h1 class="mt-6 font-display text-[clamp(2.75rem,5.6vw,4.5rem)] leading-[1.02] font-semibold tracking-[-0.03em] text-pearl" data-reveal-line>
-              <span class="line-mask"><span class="line-inner">Curso {program.exam}</span></span>
-              <span class="line-mask"><span class="line-inner"><em class="font-display italic font-medium text-teal-400">¡garantizado!</em></span></span>
-            </h1>
-            <p class="mt-6 max-w-lg text-lg leading-relaxed text-ink-300" data-reveal>
-              {program.subheadline}
-            </p>
-          </div>
-        )}
+        <div class="mt-5">
+          <h1 class="font-display text-[clamp(2.5rem,5.2vw,4.25rem)] leading-[1.08] font-semibold tracking-[-0.03em] text-pearl">
+            {landing.heroLines.map((line) => (<Fragment>{line}<br /></Fragment>))}
+            <span class="text-[#00cfab]">¡garantizado!</span>
+          </h1>
+          <p class="mt-6 max-w-lg text-[17px] leading-relaxed text-ink-300">
+            {landing.heroSub}
+          </p>
+        </div>
 
         <div class="mt-9 flex flex-wrap items-center gap-4" data-reveal>
-          <a href={isPaa ? "#precios" : "/contacto"} class="inline-flex items-center justify-center rounded-full bg-[#00cfab] px-8 py-3.5 font-display text-[13px] font-bold tracking-widest text-[#061713] transition-transform hover:scale-[1.02] shadow-md uppercase" data-magnetic data-event={`program_cta_${program.slug}`}>
-            {isPaa ? "VER PAQUETES" : "Inscríbete ahora"}
+          <a href="#precios" class="inline-flex items-center justify-center rounded-full bg-[#00cfab] px-8 py-3.5 font-display text-[13px] font-bold tracking-widest text-[#061713] transition-transform hover:scale-[1.02] shadow-md uppercase" data-magnetic data-event={`program_cta_${program.slug}`}>
+            VER PRECIOS
           </a>
-          <a href={isPaa ? "#contacto" : program.slug === "toefl-ibt" ? "/Diagn%C3%B3stico%20TOEFL%20IBT%20de%20Proacademy.pdf" : "/contacto"} target={program.slug === "toefl-ibt" ? "_blank" : undefined} rel={program.slug === "toefl-ibt" ? "noopener noreferrer" : undefined} class="inline-flex items-center justify-center rounded-full bg-[#121c19] border border-white/10 px-8 py-3.5 font-display text-[13px] font-bold tracking-widest text-pearl transition-colors hover:bg-white/10 uppercase" data-magnetic>
-            {isPaa ? "HAZ TU DIAGNÓSTICO GRATIS" : "Diagnóstico gratis"}
+          <a href="#contacto" class="inline-flex items-center justify-center rounded-full bg-[#121c19] border border-white/10 px-8 py-3.5 font-display text-[13px] font-bold tracking-widest text-pearl transition-colors hover:bg-white/10 uppercase" data-magnetic>
+            HAZ TU DIAGNÓSTICO GRATIS
           </a>
         </div>
       </div>
 
-      {program.heroImage && (
-        <div class:list={[
-          "course-hero-image-wrapper pointer-events-none mx-auto mt-12 w-full lg:absolute lg:mx-0 lg:mt-0",
-          isPaa
-            ? "max-w-xl sm:max-w-2xl lg:right-0 xl:right-4 lg:bottom-0 lg:w-[54%] lg:max-w-[720px] xl:max-w-[760px]"
-            : program.slug === 'sat' || program.slug === 'gmat'
-              ? "course-hero-image max-w-4xl lg:right-[calc(50%-53vw)] lg:bottom-0 lg:w-[78%] lg:max-w-[1350px]"
-              : "course-hero-image max-w-2xl lg:right-[calc(50%-50vw)] lg:bottom-0 lg:w-[65%] lg:max-w-[1100px]"
-        ]}>
-          {isPaa && (
-            <div class="absolute -top-7 -left-7 sm:-top-9 sm:-left-9 lg:-top-11 lg:-left-11 z-20 size-40 sm:size-48 lg:size-52 select-none -rotate-6 filter drop-shadow-[0_14px_26px_rgba(0,0,0,0.55)]">
-              <svg viewBox="0 0 200 200" class="size-full font-display" aria-hidden="true">
-                <defs>
-                  <linearGradient id="paaSealGrad" x1="15%" y1="10%" x2="85%" y2="90%">
-                    <stop offset="0%" stop-color="#09695b" />
-                    <stop offset="55%" stop-color="#0b7f6e" />
-                    <stop offset="100%" stop-color="#0f8d79" />
-                  </linearGradient>
-                  <path id="paaSealWave" d="M 182.00 100.00 Q 199.10 126.55 171.01 141.00 Q 172.55 172.55 141.00 171.01 Q 126.55 199.10 100.00 182.00 Q 73.45 199.10 59.00 171.01 Q 27.45 172.55 28.99 141.00 Q 0.90 126.55 18.00 100.00 Q 0.90 73.45 28.99 59.00 Q 27.45 27.45 59.00 28.99 Q 73.45 0.90 100.00 18.00 Q 126.55 0.90 141.00 28.99 Q 172.55 27.45 171.01 59.00 Q 199.10 73.45 182.00 100.00 Z" />
-                </defs>
-                <use href="#paaSealWave" fill="url(#paaSealGrad)" />
-                <use href="#paaSealWave" fill="none" stroke="#2dd4bf" stroke-width="1.35" opacity="0.85" transform="translate(100,100) scale(0.87) translate(-100,-100)" />
-                <text x="100" y="65" text-anchor="middle" fill="#a7f3d0" font-size="13.5" font-weight="600" letter-spacing="3">GARANTÍA</text>
-                <text x="100" y="109" text-anchor="middle" fill="#ffffff" font-size="38" font-weight="800" letter-spacing="-1">+150 <tspan font-size="13.5" font-weight="700" letter-spacing="0" dy="-2">pts</tspan></text>
-                <text x="100" y="135" text-anchor="middle" fill="#e6fffb" font-size="9" font-weight="500" opacity="0.95">sobre tu diagnóstico inicial</text>
-              </svg>
-            </div>
-          )}
+      <div class="course-hero-image-wrapper pointer-events-none relative mx-auto mt-12 w-full max-w-xl sm:max-w-2xl lg:absolute lg:right-0 xl:right-4 lg:bottom-0 lg:mx-0 lg:mt-0 lg:w-[54%] lg:max-w-[720px] xl:max-w-[760px]">
+        {(
+        <div class="course-seal absolute -top-7 -left-7 sm:-top-9 sm:-left-9 lg:-top-11 lg:-left-11 z-20 size-40 sm:size-48 lg:size-52 select-none">
+          <svg viewBox="-12 -12 224 224" class="size-full font-display overflow-visible" aria-hidden="true" text-rendering="geometricPrecision">
+            <defs>
+              <filter id="paaSealShadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="6" stdDeviation="7" flood-color="#000" flood-opacity="0.55" /></filter>
+              <linearGradient id="paaSealGrad" x1="15%" y1="10%" x2="85%" y2="90%">
+                <stop offset="0%" stop-color="#09695b" />
+                <stop offset="55%" stop-color="#0b7f6e" />
+                <stop offset="100%" stop-color="#0f8d79" />
+              </linearGradient>
+              <path id="paaSealWave" d="M 182.00 100.00 Q 199.10 126.55 171.01 141.00 Q 172.55 172.55 141.00 171.01 Q 126.55 199.10 100.00 182.00 Q 73.45 199.10 59.00 171.01 Q 27.45 172.55 28.99 141.00 Q 0.90 126.55 18.00 100.00 Q 0.90 73.45 28.99 59.00 Q 27.45 27.45 59.00 28.99 Q 73.45 0.90 100.00 18.00 Q 126.55 0.90 141.00 28.99 Q 172.55 27.45 171.01 59.00 Q 199.10 73.45 182.00 100.00 Z" />
+            </defs>
+            <g transform="rotate(-6 100 100)">
+            <use href="#paaSealWave" fill="url(#paaSealGrad)" filter="url(#paaSealShadow)" />
+            <use href="#paaSealWave" fill="none" stroke="#2dd4bf" stroke-width="1.35" opacity="0.85" transform="translate(100,100) scale(0.87) translate(-100,-100)" />
+            <text x="100" y="65" text-anchor="middle" fill="#a7f3d0" font-size="13.5" font-weight="600" letter-spacing="3">GARANTÍA</text>
+            <text x="100" y="109" text-anchor="middle" fill="#ffffff" font-size="38" font-weight="800" letter-spacing="-1">+{landing.sealPoints} <tspan font-size="13.5" font-weight="700" letter-spacing="0" dy="-2">pts</tspan></text>
+            <text x="100" y="135" text-anchor="middle" fill="#e6fffb" font-size="9.5" font-weight="600" opacity="1">sobre tu diagnóstico inicial</text>
+            </g>
+          </svg>
+        </div>
+        )}
+        {program.heroImage ? (
           <img
             src={program.heroImage.src}
-            alt={isPaa ? "Garantía +150 pts sobre tu diagnóstico inicial - Prueba de práctica PAA College Board" : `Plataforma de práctica ${program.exam}`}
+            alt={`Garantía +${landing.sealPoints} pts sobre tu diagnóstico inicial - Plataforma de práctica ${landing.label}`}
             width={program.heroImage.width}
             height={program.heroImage.height}
             loading="eager"
             fetchpriority="high"
             decoding="sync"
-            class:list={[
-              "w-full drop-shadow-2xl rounded-2xl sm:rounded-3xl",
-              !isPaa && "course-hero-image"
-            ]}
+            class:list={["w-full", program.slug === "sat" && "aspect-[1262/766] object-cover object-left-top"]}
           />
-        </div>
-      )}
+        ) : (
+          <div class="aspect-[1262/766] w-full rounded-2xl border border-white/10 bg-gradient-to-br from-[#0c2f27] via-[#08201a] to-[#061411] sm:rounded-3xl" aria-hidden="true"></div>
+        )}
+      </div>
     </div>
   </section>
 
   <!-- MÉTRICAS -->
-  <section class:list={["hairline-b", isPaa ? "course-metrics-paa" : ""]} aria-label="El programa en números">
+  <section class="hairline-b course-metrics-paa" aria-label="El programa en números">
     <div class="container-edge grid grid-cols-2 lg:grid-cols-4">
-      {stats.map((s, i) => (
-        <div class:list={["px-6 py-9", !isPaa && i > 0 && "border-l border-ink-950/8", !isPaa && i >= 2 && "max-lg:border-t max-lg:border-ink-950/8", !isPaa && i === 2 && "max-lg:border-l-0"]} data-reveal>
-          <p class="font-display text-4xl font-semibold tracking-tight text-ink-950 sm:text-5xl">
-            {s.prefix && <span class={isPaa ? "text-[#00cfab]" : "text-teal-600"}>{s.prefix}</span>}
-            {s.text ? (
-              <span>{s.text}</span>
-            ) : (
-              <span data-counter={isDecoupled ? undefined : String(s.value)}>{s.value?.toLocaleString("es-MX")}</span>
-            )}
-          </p>
-          <p class:list={["mt-2 font-mono text-[10px] tracking-[0.18em] uppercase", isPaa ? "text-teal-200/60" : "text-ink-500"]}>{s.label}</p>
+      {landing.stats.map((s) => (
+        <div class="px-5 py-9 sm:px-6" data-reveal>
+          <p class="font-display whitespace-nowrap text-[1.7rem] font-semibold tracking-tight text-ink-950 min-[420px]:text-[2.1rem] sm:text-[2.75rem]">{s.prefix && <span class="text-[#00cfab]">{s.prefix}</span>}{s.text ? s.text : s.value?.toLocaleString("es-MX")}</p>
+          <p class="mt-2 font-mono text-[10px] tracking-[0.18em] uppercase text-teal-200/60">{s.label}</p>
         </div>
       ))}
     </div>
   </section>
 
-  {isPaa ? (
     <!-- ======================================================== -->
-    <!-- SECUENCIA OFICIAL FIGMA PARA PAA                          -->
     <!-- 1. DOMINA TU EXAMEN PAA (la chica + tabs)                -->
     <!-- 2. PREPARACIÓN ACADÉMICA A TU MEDIDA (4 tarjetas)        -->
     <!-- 3. ENTRENA COMO SI YA FUERA EL DÍA DEL EXAMEN (mockup)   -->
@@ -213,60 +212,46 @@ const schema = [
     <!-- ======================================================== -->
 
     <!-- 1. DOMINA TU EXAMEN PAA, TODAS LAS SECCIONES (oscuro) -->
-    <section class="course-sections relative overflow-hidden pt-12 pb-16 hairline-t-dim" style="background-color: rgb(8 13 13)" aria-label="Secciones del examen PAA">
+    <section class="course-sections relative overflow-hidden pt-12 pb-16 hairline-t-dim" style="background-color: rgb(8 13 13)" aria-label={`Secciones del examen ${program.exam}`}>
       <div class="pointer-events-none absolute -left-40 top-0 h-[40rem] w-[40rem] rounded-full bg-[#0a1f1c] blur-[60px]" aria-hidden="true"></div>
 
       <div class="container-edge grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12 items-end">
         <!-- Columna izquierda: Figura verde orgánica + Chica + Check (Figma) -->
         <div class="relative flex items-end justify-center self-end min-h-[380px] sm:min-h-[460px] lg:min-h-[540px]" data-reveal>
-          <!-- Figura orgánica en verde esmeralda oscuro detrás de la chica -->
-          <div class="pointer-events-none absolute inset-x-0 bottom-0 top-10 sm:top-14 overflow-hidden rounded-t-[3.5rem] sm:rounded-t-[4.5rem] bg-gradient-to-b from-[#0c2f27] via-[#08201a] to-[#061411] border-t border-l border-teal-400/20 shadow-2xl">
-            <svg viewBox="0 0 460 480" class="absolute inset-0 size-full opacity-60" fill="none" preserveAspectRatio="none">
-              <path d="M 0 160 C 40 80, 120 10, 240 6 C 360 2, 430 40, 460 70 L 460 480 L 0 480 Z" fill="url(#paaGirlBackdropGrad)" />
-              <defs>
-                <linearGradient id="paaGirlBackdropGrad" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stop-color="#144d3f" stop-opacity="0.8" />
-                  <stop offset="60%" stop-color="#0a2620" stop-opacity="0.5" />
-                  <stop offset="100%" stop-color="#061613" stop-opacity="0.2" />
-                </linearGradient>
-              </defs>
-            </svg>
-          </div>
+          <div class="pointer-events-none absolute -left-[28%] bottom-[-12%] h-[96%] w-[150%] rounded-[50%] bg-[#0c2b24]/70" aria-hidden="true"></div>
 
           <!-- Badge flotante check circular verde como en Figma -->
-          <div class="absolute left-4 sm:left-8 top-[36%] z-20 size-11 sm:size-12 rounded-full bg-[#00cfab] flex items-center justify-center shadow-[0_0_25px_rgba(0,207,171,0.5)] border border-teal-300/40">
-            <Icon name="ph:check" class="size-6 text-white stroke-[3]" />
-          </div>
+          <img src="/images/check-badge.svg" alt="" width="72" height="72" aria-hidden="true" class="course-check absolute left-2 sm:left-6 lg:-left-3 xl:-left-14 top-[12%] z-20 size-14 lg:size-[4.5rem]" />
 
           <!-- Estudiante sentada con tablet -->
           <img
             src={program.skillsImage}
-            alt="Estudiante preparándose para la PAA"
+            alt={`Estudiante preparándose para el examen ${program.exam}`}
             width="812"
             height="745"
             loading="lazy"
             decoding="async"
-            class="relative z-10 w-full max-w-[420px] sm:max-w-[480px] lg:max-w-[520px] object-contain object-bottom drop-shadow-xl"
+            class="student-img relative z-10 w-full max-w-[420px] sm:max-w-[520px] lg:max-w-none object-contain object-bottom" style={`--sw: ${landing.studentWidth ?? 150}%`}
           />
         </div>
 
         <!-- Columna de Tabs a la derecha -->
-        <div class="course-exam-details relative z-10 lg:pt-8 lg:pb-6" data-reveal>
+        <div class="course-exam-details relative z-10 w-full min-w-0 lg:pt-8 lg:pb-6 lg:max-w-[554px]" data-reveal>
           <h2 class="font-display text-4xl font-semibold leading-[1.05] tracking-tight text-pearl sm:text-5xl">
-            Domina tu examen PAA,<br />
+            {landing.examHeading}<br />
             <span class="text-[#00cfab]">todas las secciones.</span>
           </h2>
           <p class="mt-5 max-w-lg text-base leading-relaxed text-ink-300">
-            Trabaja las habilidades exactas que evalúa el temario de la PAA, utilizando estrategias prácticas para resolver con precisión y velocidad cada reactivo.
+            {landing.examIntro}
           </p>
 
           <div class="mt-8" data-exam-tabs>
-            <div class="flex gap-1.5 rounded-[2rem] border border-white/5 bg-[#0b1613]/50 p-2" role="tablist" aria-label="Secciones del examen PAA">
+            <div class="flex gap-1.5 overflow-x-auto rounded-[2rem] border border-white/5 bg-[#0b1613]/50 p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" style={(program.examSections?.length ?? 4) <= 2 ? "max-width: 17rem" : undefined} role="tablist" aria-label={`Secciones del examen ${program.exam}`}>
               {program.examSections?.map((s, i) => (
                 <button
                   type="button"
                   role="tab"
-                  class="exam-tab flex flex-1 items-center justify-center gap-2 rounded-full px-2 py-2.5 font-display text-sm font-semibold text-ink-400 transition-all border border-transparent"
+                  class="exam-tab flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2.5 font-display text-sm font-semibold text-ink-400 transition-all border border-transparent sm:flex-1 sm:shrink sm:px-2"
                   data-exam-tab
                   data-index={i}
                   id={`exam-tab-paa-${i}`}
@@ -275,7 +260,7 @@ const schema = [
                   aria-selected={i === 0 ? "true" : "false"}
                 >
                   <Icon name={examIcons[i] ?? "ph:circle"} class="size-[1.125rem] shrink-0 opacity-70 transition-opacity" aria-hidden="true" />
-                  <span>{s.name}</span>
+                  <span>{s.tabLabel ?? s.name}</span>
                 </button>
               ))}
             </div>
@@ -286,12 +271,18 @@ const schema = [
                 <div class="flex flex-1 flex-col justify-between bg-[#172c26]/75 p-7 sm:p-8">
                   <div>
                     <h3 class="font-display text-2xl font-semibold tracking-tight text-pearl sm:text-[1.7rem]">
-                      {s.name}
+                      {s.name}{s.panelSuffix && <span class="font-normal text-pearl/85"> — {s.panelSuffix}</span>}
                     </h3>
                     <p class="mt-3.5 max-w-2xl text-[15px] leading-relaxed text-pearl/70">{s.description}</p>
                   </div>
 
                   <div class="mt-8 flex flex-wrap gap-x-12 gap-y-4">
+                    {s.structure && (
+                      <div>
+                        <p class="font-mono text-[9px] font-bold tracking-[0.2em] text-pearl/40 uppercase">Estructura</p>
+                        <p class="mt-1 font-display text-[17px] font-semibold text-pearl">{s.structure}</p>
+                      </div>
+                    )}
                     <div>
                       <p class="font-mono text-[9px] font-bold tracking-[0.2em] text-pearl/40 uppercase">Tiempo total</p>
                       <p class="mt-1 font-display text-[17px] font-semibold text-pearl">{s.time}</p>
@@ -345,7 +336,7 @@ const schema = [
             return (
               <div class:list={[
                 "relative flex flex-col justify-center overflow-hidden rounded-3xl border border-ink-950/[0.04] p-7 sm:p-8 min-h-[190px]",
-                isPaa ? "bg-[#ebedec]" : "bg-ink-50 border-ink-950/[0.06]",
+                "bg-[#ebedec]",
                 isWide ? "lg:col-span-8" : "lg:col-span-4"
               ]} data-reveal>
                 <div class:list={["relative z-10", isWide ? "max-w-xs sm:max-w-sm lg:max-w-[19rem] xl:max-w-[21rem]" : "max-w-full"]}>
@@ -382,85 +373,86 @@ const schema = [
     </section>
 
     <!-- 3. ENTRENA COMO SI YA FUERA EL DÍA DEL EXAMEN (oscuro) -->
-    <section class="relative overflow-hidden py-24 hairline-t-dim hairline-b-dim" style="background-color: rgb(8 16 14)" aria-label="Plataforma de simulación PAA">
+    <section class="relative overflow-hidden py-24 hairline-t-dim hairline-b-dim" style="background-color: rgb(8 16 14)" aria-label={`Plataforma de simulación ${program.exam}`}>
       <div class="pointer-events-none absolute -left-24 top-1/2 -translate-y-1/2 h-[42rem] w-[62rem] rounded-[50%] bg-[#0c2b24]/45 blur-[2px] -rotate-12" aria-hidden="true"></div>
       <div class="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 h-[38rem] w-[38rem] rounded-full bg-teal-600/10 blur-[130px]" aria-hidden="true"></div>
 
       <div class="container-edge relative grid items-center gap-12 lg:grid-cols-[1.02fr_0.98fr] lg:gap-16">
         <div data-reveal>
           <h2 class="font-display text-[clamp(2.15rem,4vw,3.25rem)] font-semibold leading-[1.08] tracking-tight text-pearl">
-            Entrena como si ya<br />
-            fuera <span class="text-[#00cfab]">el día del examen.</span>
+            {landing.platformHeading ? (
+              <Fragment>{landing.platformHeading.line}<br /><span class="text-[#00cfab]">{landing.platformHeading.accent}</span></Fragment>
+            ) : (
+              <Fragment>Entrena como si ya<br />fuera <span class="text-[#00cfab]">el día del examen.</span></Fragment>
+            )}
           </h2>
 
           <p class="mt-5 max-w-xl text-[16px] sm:text-[17px] leading-relaxed text-ink-300">
-            Nuestra plataforma replica el nivel, formato y presión de tiempo de la PAA para convertir cada práctica en una ventaja real.
+            {landing.platformIntro}
           </p>
 
           <ul class="mt-8 divide-y divide-white/10 border-t border-white/10">
-            <li class="flex items-start gap-4 py-5">
-              <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-teal-950/90 border border-teal-500/30 text-[#00cfab] mt-0.5">
-                <Icon name="ph:pencil-simple-line" class="size-5" />
-              </span>
-              <div>
-                <h3 class="font-display text-[16px] font-semibold text-pearl">Más de 5,000 ejercicios calibrados</h3>
-                <p class="mt-1 text-[14px] leading-relaxed text-ink-300">Reactivos actualizados al nivel y formato oficial del College Board.</p>
-              </div>
-            </li>
-            <li class="flex items-start gap-4 py-5">
-              <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-teal-950/90 border border-teal-500/30 text-[#00cfab] mt-0.5">
-                <Icon name="ph:list-checks" class="size-5" />
-              </span>
-              <div>
-                <h3 class="font-display text-[16px] font-semibold text-pearl">Simulacros bajo condiciones reales</h3>
-                <p class="mt-1 text-[14px] leading-relaxed text-ink-300">Evaluaciones cronometradas para dominar el tiempo por pregunta.</p>
-              </div>
-            </li>
-            <li class="flex items-start gap-4 py-5">
-              <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-teal-950/90 border border-teal-500/30 text-[#00cfab] mt-0.5">
-                <Icon name="ph:magnifying-glass" class="size-5" />
-              </span>
-              <div>
-                <h3 class="font-display text-[16px] font-semibold text-pearl">Diagnóstico continuo y preciso</h3>
-                <p class="mt-1 text-[14px] leading-relaxed text-ink-300">Reportes que detectan áreas de oportunidad para tus sesiones 1 a 1.</p>
-              </div>
-            </li>
+            {landing.platformBullets.map((item) => (
+              <li class="flex items-start gap-4 py-5">
+                <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-teal-950/90 border border-teal-500/30 text-[#00cfab] mt-0.5">
+                  <Icon name={item.icon} class="size-5" />
+                </span>
+                <div>
+                  <h3 class="font-display text-[16px] font-semibold text-pearl">{item.title}</h3>
+                  <p class="mt-1 text-[14px] leading-relaxed text-ink-300">{item.detail}</p>
+                </div>
+              </li>
+            ))}
           </ul>
         </div>
 
         <!-- Tarjeta de progreso de plataforma (Asset de Figma) -->
         <div class="relative mx-auto w-full max-w-lg lg:max-w-none flex justify-center" data-reveal>
           <div class="relative w-full max-w-[540px]">
-            <img
-              src="/images/paa-entrena-card.webp"
-              alt="Panel de progreso y métricas de plataforma PAA"
-              width="974"
-              height="836"
-              loading="lazy"
-              decoding="async"
-              class="w-full drop-shadow-[0_25px_50px_rgba(0,0,0,0.45)]"
-            />
+            <div class="relative mx-auto w-full max-w-[470px] [perspective:1400px]" role="img" aria-label={`Panel de progreso por sección de la plataforma ${landing.label}`}>
+              <div class="relative origin-center rounded-[1.75rem] bg-gradient-to-br from-white to-[#e8f0ee] p-7 shadow-[0_30px_60px_rgba(0,0,0,0.5)] sm:p-9" style="transform: rotateX(8deg) rotateY(-14deg) rotateZ(-9deg);">
+                <div class="flex items-start justify-between">
+                  <p class="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-ink-400">Progreso general</p>
+                  <p class="font-display text-3xl font-semibold tracking-tight text-[#0b7f6e]">{landing.platformOverall ?? "80%"}</p>
+                </div>
+                <ul class="mt-6 space-y-5" aria-hidden="true">
+                  {(landing.platformBars ?? (program.examSections ?? []).slice(0, 4).map((x, i): { label: string; value: number; display?: string } => ({ label: x.name, value: [84, 67, 72, 64][i % 4] }))).map((bar) => (
+                    <li class="grid grid-cols-[5.5rem_1fr_2rem] items-center gap-3">
+                      <span class="font-display text-[12px] font-medium text-ink-700">{bar.label}</span>
+                      <span class="h-[5px] rounded-full bg-ink-100"><span class="block h-[5px] rounded-full bg-[#0b9e86]" style={`width: ${bar.value}%`}></span></span>
+                      <span class="text-right text-[10px] text-ink-400">{bar.display ?? `${bar.value}%`}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              {(landing.platformScore || landing.platformScoreText) && (
+                <div class="absolute -bottom-6 right-[-2%] rounded-2xl bg-[#0b2a24] px-5 py-3 shadow-xl ring-1 ring-teal-400/20" style="transform: rotateZ(-9deg);">
+                  <p class="font-mono text-[8px] uppercase tracking-[0.14em] text-teal-200/70">Último simulacro</p>
+                  <p class="font-display text-lg font-semibold text-white">{landing.platformScoreText ?? `+${landing.platformScore?.toLocaleString("en-US")} puntos`}</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
     </section>
 
     <!-- 4. LA MEJOR OPCIÓN PARA APROBAR - PRECIOS (Diseño exacto de Figma) -->
-    <section id="precios" class="bg-[#eff2f1] py-24 hairline-b" aria-label="Planes y precios del curso PAA">
+    <section id="precios" class="bg-[#eff2f1] py-24 hairline-b" aria-label={`Planes y precios del curso ${program.exam}`}>
       <div class="container-edge !max-w-[90rem]">
         <div class="grid items-center gap-12 lg:grid-cols-[0.68fr_1.48fr] lg:gap-12 xl:gap-14">
           <!-- Columna izquierda: Título, intro y lista vertical de 4 beneficios -->
           <div data-reveal class="space-y-5">
             <h2 class="font-display text-[clamp(2.35rem,4.4vw,3.5rem)] font-semibold leading-[1.06] tracking-tight text-ink-950">
-              La mejor opción <br />
+              La mejor {landing.priceHeading ?? "opción"} <br />
               <span class="text-[#008f7a]">para aprobar.</span>
             </h2>
             <p class="text-[15px] leading-relaxed text-ink-600 max-w-md">
-              En nuestro curso diseñamos una metodología flexible con la que aseguras que cada hora de estudio se traduzca en un puntaje real y medible.
+              En nuestro curso {landing.label} diseñamos una metodología flexible con la que aseguras que cada hora de estudio se traduzca en un puntaje real y medible.
             </p>
 
             <ul class="divide-y divide-ink-950/[0.08] pt-2">
-              {paaPriceBenefits.map((b) => (
+              {priceBenefits.map((b) => (
                 <li class="flex items-center gap-3.5 py-3.5 text-[14.5px] font-display font-medium text-ink-800">
                   <span class="grid size-6 shrink-0 place-items-center rounded-full bg-[#007a68] text-white" aria-hidden="true">
                     <Icon name="ph:check" class="size-3.5 text-white stroke-[3]" />
@@ -469,6 +461,12 @@ const schema = [
                 </li>
               ))}
             </ul>
+            <p class="pt-2">
+              <a href={`${pricingPath(program.slug)}/`} class="inline-flex items-center gap-2 font-display text-[14px] font-semibold text-[#007a68] hover:underline">
+                Ver todos los planes del curso {landing.label}
+                <Icon name="ph:arrow-right" class="size-4" aria-hidden="true" />
+              </a>
+            </p>
           </div>
 
           <!-- Columna derecha: Bloque unificado (Pro Esencial + Pro Avanzado) + Pro Élite elevada -->
@@ -476,24 +474,24 @@ const schema = [
             <!-- Card 1: Pro Esencial (Blanca, mitad izquierda unificada) -->
             <div class="bg-white rounded-[1.75rem] lg:rounded-r-none p-6 xl:p-7 flex flex-col justify-between shadow-[0_20px_50px_-20px_rgba(0,0,0,0.08)] border border-black/[0.04] lg:border-r-0">
               <div>
-                <div class="min-h-[6.25rem]">
-                  <h3 class="font-display text-[1.6rem] xl:text-[1.75rem] font-extrabold tracking-tight text-[#1b2a38] leading-none">Pro Esencial</h3>
-                  <p class="mt-2.5 text-[12.5px] leading-relaxed text-slate-500">Para estudiantes disciplinados que buscan material de alta calidad.</p>
+                <div class="min-h-[7.25rem]">
+                  <h3 class="font-display text-[1.9rem] xl:text-[2.15rem] font-extrabold tracking-tight text-[#1b2a38] leading-none">Pro Esencial</h3>
+                  <p class="mt-2.5 text-[14.5px] leading-relaxed text-slate-500">Para estudiantes disciplinados que buscan material de alta calidad.</p>
                 </div>
 
-                <div class="mt-3 min-h-[5.25rem] flex flex-col justify-end">
-                  <p class="text-[11px] font-semibold text-slate-600">Pago único, acceso por 6 meses</p>
+                <div class="mt-2 min-h-[6.25rem] flex flex-col justify-end">
+                  <p class="text-[12.5px] font-semibold text-slate-600">Pago único, acceso por 6 meses</p>
                   <div class="mt-1 flex items-baseline gap-1 text-[#1b2a38]">
-                    <span class="font-display text-[1.85rem] xl:text-[2.15rem] font-extrabold tracking-tight leading-none">$2,490</span>
-                    <span class="text-[11px] font-bold text-slate-500 uppercase">MXN</span>
+                    <span class="font-display text-[2.2rem] xl:text-[2.6rem] font-extrabold tracking-tight leading-none">{plans.essentialPrice}</span>
+                    <span class="text-[12.5px] font-bold text-slate-500 uppercase">MXN</span>
                   </div>
                 </div>
 
                 <a
-                  href={`https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent("Hola, me interesa el plan Pro Esencial del curso PAA. ¿Me pueden dar más información?")}`}
+                  href={`https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent(`Hola, me interesa el plan Pro Esencial del curso ${program.exam}. ¿Me pueden dar más información?`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="mt-5 inline-flex w-full items-center justify-center rounded-full bg-[#00cfab] py-3 px-4 font-display text-[12px] font-bold tracking-wider text-[#061713] transition-colors hover:bg-[#00bda0] uppercase"
+                  class="mt-5 inline-flex w-full items-center justify-center rounded-full bg-[#00cfab] py-3 px-4 font-display text-[13.5px] font-bold tracking-wider text-[#061713] transition-colors hover:bg-[#00bda0] uppercase"
                   data-magnetic
                 >
                   CONTÁCTANOS
@@ -501,53 +499,46 @@ const schema = [
 
                 <div class="my-5 h-px w-full bg-slate-200/70" aria-hidden="true"></div>
 
-                <p class="font-mono text-[9.5px] font-bold tracking-wider text-[#008f7a] uppercase">¿QUÉ INCLUYE ESTE PLAN?</p>
+                <p class="font-mono text-[10.5px] font-bold tracking-wider text-[#008f7a] uppercase">¿QUÉ INCLUYE ESTE PLAN?</p>
                 <ul class="mt-3.5 space-y-3">
-                  <li class="flex items-start gap-2.5 text-[13px] text-slate-600 font-medium">
-                    <Icon name="ph:check-circle" class="size-4 shrink-0 text-[#008f7a] mt-0.5" />
-                    <span>Acceso a la plataforma digital</span>
-                  </li>
-                  <li class="flex items-start gap-2.5 text-[13px] text-slate-600 font-medium">
-                    <Icon name="ph:check-circle" class="size-4 shrink-0 text-[#008f7a] mt-0.5" />
-                    <span>+20 exámenes de simulación</span>
-                  </li>
-                  <li class="flex items-start gap-2.5 text-[13px] text-slate-600 font-medium">
-                    <Icon name="ph:check-circle" class="size-4 shrink-0 text-[#008f7a] mt-0.5" />
-                    <span>Tutor de IA Integrado</span>
-                  </li>
-                  <li class="flex items-start gap-2.5 text-[13px] text-slate-600 font-medium">
-                    <Icon name="ph:check-circle" class="size-4 shrink-0 text-[#008f7a] mt-0.5" />
-                    <span>+5,000 preguntas de práctica</span>
-                  </li>
-                  <li class="flex items-start gap-2.5 text-[13px] text-slate-600 font-medium">
-                    <Icon name="ph:check-circle" class="size-4 shrink-0 text-[#008f7a] mt-0.5" />
-                    <span>Lecciones en video</span>
-                  </li>
+                  {plans.essential.map((feature) => (
+                    <li class="flex items-start gap-2.5 text-[15px] text-slate-600 font-medium">
+                      <Icon name="ph:check-circle" class="size-4 shrink-0 text-[#008f7a] mt-0.5" />
+                      {typeof feature === "string" ? (
+                        <span>{feature}</span>
+                      ) : (
+                        <div>
+                          <span>{feature.label}</span>
+                          <span class="block text-[12.5px] text-slate-400">{feature.note}</span>
+                        </div>
+                      )}
+                    </li>
+                  ))}
                 </ul>
               </div>
             </div>
 
             <!-- Card 2: Pro Avanzado (Blanca, mitad derecha unificada con badge RECOMENDADO y selector compacto) -->
             <div class="relative bg-white rounded-[1.75rem] lg:rounded-none p-6 xl:p-7 flex flex-col justify-between shadow-[0_20px_50px_-20px_rgba(0,0,0,0.08)] border border-black/[0.04] lg:border-l lg:border-slate-200/80">
-              <span class="absolute -top-3 right-6 whitespace-nowrap rounded-full bg-[#007a68] px-3.5 py-1 font-mono text-[9.5px] font-bold tracking-[0.14em] text-white shadow-md uppercase">
+              <span class="absolute -top-3 right-6 whitespace-nowrap rounded-full bg-[#007a68] px-3.5 py-1 font-mono text-[10.5px] font-bold tracking-[0.14em] text-white shadow-md uppercase">
                 RECOMENDADO
               </span>
 
               <div>
-                <div class="min-h-[6.25rem]">
-                  <h3 class="font-display text-[1.6rem] xl:text-[1.75rem] font-extrabold tracking-tight text-[#1b2a38] leading-none">Pro Avanzado</h3>
-                  <p class="mt-2.5 text-[12.5px] leading-relaxed text-slate-500">Evalúa tu nivel y trabaja en tus debilidades con la ayuda de nuestros expertos.</p>
+                <div class="min-h-[7.25rem]">
+                  <h3 class="font-display text-[1.9rem] xl:text-[2.15rem] font-extrabold tracking-tight text-[#1b2a38] leading-none">Pro Avanzado</h3>
+                  <p class="mt-2.5 text-[14.5px] leading-relaxed text-slate-500">Evalúa tu nivel y trabaja en tus debilidades con la ayuda de nuestros expertos.</p>
                 </div>
 
-                <div class="mt-3 min-h-[5.25rem] flex flex-col justify-end">
-                  <HourPricePicker packages={PAA_HOUR_PACKAGES} exam="PAA" note="Elige tus clases en vivo:" compact />
+                <div class="mt-2 min-h-[6.25rem] flex flex-col justify-end">
+                  <HourPricePicker packages={program.slug === "toefl-ibt" ? TOEFL_HOUR_PACKAGES : PAA_HOUR_PACKAGES} exam={program.exam} note="Elige tus clases en vivo:" compact />
                 </div>
 
                 <a
-                  href={`https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent("Hola, me interesa el plan Pro Avanzado del curso PAA. ¿Me pueden dar más información?")}`}
+                  href={`https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent(`Hola, me interesa el plan Pro Avanzado del curso ${program.exam}. ¿Me pueden dar más información?`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="mt-5 inline-flex w-full items-center justify-center rounded-full bg-[#00cfab] py-3 px-4 font-display text-[12px] font-bold tracking-wider text-[#061713] transition-colors hover:bg-[#00bda0] uppercase"
+                  class="mt-5 inline-flex w-full items-center justify-center rounded-full bg-[#00cfab] py-3 px-4 font-display text-[13.5px] font-bold tracking-wider text-[#061713] transition-colors hover:bg-[#00bda0] uppercase"
                   data-magnetic
                 >
                   CONTÁCTANOS
@@ -555,27 +546,21 @@ const schema = [
 
                 <div class="my-5 h-px w-full bg-slate-200/70" aria-hidden="true"></div>
 
-                <p class="font-mono text-[9.5px] font-bold tracking-wider text-[#008f7a] uppercase">INCLUYE TODO DEL PLAN ESENCIAL, MÁS:</p>
+                <p class="font-mono text-[10.5px] font-bold tracking-wider text-[#008f7a] uppercase">INCLUYE TODO DEL PLAN ESENCIAL, MÁS:</p>
                 <ul class="mt-3.5 space-y-3">
-                  <li class="flex items-start gap-2.5 text-[13px] text-slate-600 font-medium">
-                    <Icon name="ph:check-circle" class="size-4 shrink-0 text-[#008f7a] mt-0.5" />
-                    <span>Diagnóstico de tu nivel</span>
-                  </li>
-                  <li class="flex items-start gap-2.5 text-[13px] text-slate-600 font-medium">
-                    <Icon name="ph:check-circle" class="size-4 shrink-0 text-[#008f7a] mt-0.5" />
-                    <span>Plan de estudio personalizado</span>
-                  </li>
-                  <li class="flex items-start gap-2.5 text-[13px] text-slate-600 font-medium">
-                    <Icon name="ph:check-circle" class="size-4 shrink-0 text-[#008f7a] mt-0.5" />
-                    <div>
-                      <span>Clases 1:1 en vivo</span>
-                      <span class="block text-[11px] text-slate-400">10 a 20 h (ajustable según diagnóstico)</span>
-                    </div>
-                  </li>
-                  <li class="flex items-start gap-2.5 text-[13px] text-slate-600 font-medium">
-                    <Icon name="ph:check-circle" class="size-4 shrink-0 text-[#008f7a] mt-0.5" />
-                    <span>Horarios flexibles adaptables</span>
-                  </li>
+                  {plans.advanced.map((feature) => (
+                    <li class="flex items-start gap-2.5 text-[15px] text-slate-600 font-medium">
+                      <Icon name="ph:check-circle" class="size-4 shrink-0 text-[#008f7a] mt-0.5" />
+                      {typeof feature === "string" ? (
+                        <span>{feature}</span>
+                      ) : (
+                        <div>
+                          <span>{feature.label}</span>
+                          <span class="block text-[12.5px] text-slate-400">{feature.note}</span>
+                        </div>
+                      )}
+                    </li>
+                  ))}
                 </ul>
               </div>
             </div>
@@ -586,33 +571,50 @@ const schema = [
               style="background-image: linear-gradient(160deg, #102b26 0%, #0a201c 55%, #071714 100%)"
             >
               <div>
-                <div class="min-h-[6.25rem]">
-                  <h3 class="font-display text-[1.6rem] xl:text-[1.75rem] font-extrabold tracking-tight text-pearl leading-none">Pro Élite</h3>
-                  <p class="mt-2.5 text-[12.5px] leading-relaxed text-slate-300/90">Programa intensivo con acompañamiento constante para resultados garantizados.</p>
+                <div class="min-h-[7.25rem]">
+                  <h3 class="font-display text-[1.9rem] xl:text-[2.15rem] font-extrabold tracking-tight text-pearl leading-none">Pro Élite</h3>
+                  <p class="mt-2.5 text-[14.5px] leading-relaxed text-slate-300/90">Programa intensivo con acompañamiento constante para resultados garantizados.</p>
                 </div>
 
-                <div class="mt-3 min-h-[5.25rem] flex flex-col justify-end">
+                <div class="mt-2 min-h-[6.25rem] flex flex-col justify-end" data-elite-price data-list={plans.eliteBefore ?? plans.elitePrice} data-cash={plans.eliteBefore ? plans.elitePrice : ""}>
                   <div class="flex items-end justify-between gap-2">
-                    <p class="text-[11px] font-semibold text-slate-300">A partir de:</p>
-                    <span
-                      class="inline-flex flex-col items-center justify-center text-center bg-[#00cfab] pl-3.5 pr-2.5 py-1 text-[#061713] rounded-r-lg shrink-0"
-                      style="clip-path: polygon(9px 0%, 100% 0%, 100% 100%, 9px 100%, 0% 50%);"
-                    >
-                      <span class="font-display text-[7.5px] font-extrabold tracking-[0.04em] uppercase leading-none">PAGA DE CONTADO</span>
-                      <span class="font-display text-[10.5px] font-black uppercase leading-none mt-0.5">AHORRA 15%</span>
-                    </span>
+                    {plans.eliteBefore ? (
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked="true"
+                        data-cash-toggle
+                        aria-label="Ver el precio de pago único en efectivo con 15% de descuento"
+                        class="group inline-flex cursor-pointer items-center overflow-hidden rounded-full bg-white text-[9px] font-extrabold uppercase leading-none tracking-wide text-[#0b2a24] ring-1 ring-white/20 transition-shadow hover:ring-[#00cfab]"
+                      >
+                        <span class="px-2.5 py-1.5">Pago único</span>
+                        <span class="bg-slate-200 px-2.5 py-1.5 text-slate-600 transition-colors group-aria-checked:bg-[#00cfab] group-aria-checked:text-[#061713]">En efectivo -15%</span>
+                      </button>
+                    ) : (
+                      <>
+                        <p class="text-[12.5px] font-semibold text-slate-300">A partir de:</p>
+                        <span
+                          class="inline-flex flex-col items-center justify-center text-center bg-[#00cfab] pl-3.5 pr-2.5 py-1 text-[#061713] rounded-r-lg shrink-0"
+                          style="clip-path: polygon(9px 0%, 100% 0%, 100% 100%, 9px 100%, 0% 50%);"
+                        >
+                          <span class="font-display text-[7.5px] font-extrabold tracking-[0.04em] uppercase leading-none">PAGA DE CONTADO</span>
+                          <span class="font-display text-[10.5px] font-black uppercase leading-none mt-0.5">AHORRA 15%</span>
+                        </span>
+                      </>
+                    )}
                   </div>
                   <div class="mt-1 flex items-baseline gap-1 text-pearl">
-                    <span class="font-display text-[1.85rem] xl:text-[2.15rem] font-extrabold tracking-tight leading-none">$29,000</span>
-                    <span class="text-[11px] font-bold text-slate-300 uppercase">/MXN</span>
+                    <span data-price-value class="font-display text-[2.2rem] xl:text-[2.6rem] font-extrabold tracking-tight leading-none">{plans.elitePrice}</span>
+                    <span class="text-[12.5px] font-bold text-slate-300 uppercase">/MXN</span>
                   </div>
+                  {plans.eliteBefore && <p data-price-before class="mt-1 text-[11px] text-slate-400">Antes a {plans.eliteBefore}</p>}
                 </div>
 
                 <a
-                  href={`https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent("Hola, me interesa el plan Pro Élite del curso PAA. ¿Me pueden dar más información?")}`}
+                  href={`https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent(`Hola, me interesa el plan Pro Élite del curso ${program.exam}. ¿Me pueden dar más información?`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="mt-5 inline-flex w-full items-center justify-center rounded-full bg-[#00cfab] py-3 px-4 font-display text-[12px] font-bold tracking-wider text-[#061713] transition-colors hover:bg-[#00bda0] uppercase"
+                  class="mt-5 inline-flex w-full items-center justify-center rounded-full bg-[#00cfab] py-3 px-4 font-display text-[13.5px] font-bold tracking-wider text-[#061713] transition-colors hover:bg-[#00bda0] uppercase"
                   data-magnetic
                 >
                   CONTÁCTANOS
@@ -620,24 +622,21 @@ const schema = [
 
                 <div class="my-5 h-px w-full bg-white/10" aria-hidden="true"></div>
 
-                <p class="font-mono text-[9.5px] font-bold tracking-wider text-[#00cfab] uppercase">INCLUYE TODO DEL PLAN AVANZADO, MÁS:</p>
+                <p class="font-mono text-[10.5px] font-bold tracking-wider text-[#00cfab] uppercase">INCLUYE TODO DEL PLAN AVANZADO, MÁS:</p>
                 <ul class="mt-3.5 space-y-3">
-                  <li class="flex items-start gap-2.5 text-[13px] text-pearl/85 font-medium">
-                    <Icon name="ph:check-circle" class="size-4 shrink-0 text-[#00cfab] mt-0.5" />
-                    <span>40 horas de clase en vivo 1:1</span>
-                  </li>
-                  <li class="flex items-start gap-2.5 text-[13px] text-pearl/85 font-medium">
-                    <Icon name="ph:check-circle" class="size-4 shrink-0 text-[#00cfab] mt-0.5" />
-                    <span>Maestros certificados</span>
-                  </li>
-                  <li class="flex items-start gap-2.5 text-[13px] text-pearl/85 font-medium">
-                    <Icon name="ph:check-circle" class="size-4 shrink-0 text-[#00cfab] mt-0.5" />
-                    <span>Retroalimentación detallada</span>
-                  </li>
-                  <li class="flex items-start gap-2.5 text-[13px] text-pearl/85 font-medium">
-                    <Icon name="ph:check-circle" class="size-4 shrink-0 text-[#00cfab] mt-0.5" />
-                    <span>Kit de estrategia para el examen</span>
-                  </li>
+                  {plans.elite.map((feature) => (
+                    <li class="flex items-start gap-2.5 text-[15px] text-pearl/85 font-medium">
+                      <Icon name="ph:check-circle" class="size-4 shrink-0 text-[#00cfab] mt-0.5" />
+                      {typeof feature === "string" ? (
+                        <span>{feature}</span>
+                      ) : (
+                        <div>
+                          <span>{feature.label}</span>
+                          <span class="block text-[12.5px] text-slate-400">{feature.note}</span>
+                        </div>
+                      )}
+                    </li>
+                  ))}
                 </ul>
               </div>
             </div>
@@ -646,362 +645,92 @@ const schema = [
       </div>
     </section>
 
-    <!-- 5. ELLOS YA LOGRARON SU META - TESTIMONIOS PAA (claro) -->
-    <section id="testimonios" class="bg-white py-24 hairline-b" aria-label="Testimonios y casos de éxito PAA">
-      <div class="container-edge">
-        <div class="max-w-3xl" data-reveal>
-          <h2 class="font-display text-[clamp(2.5rem,5.5vw,4rem)] font-semibold leading-[1.05] tracking-tight text-ink-950">
-            Ellos ya lograron su meta.<br />
-            <span class="text-[#008f7a]">Testimonios PAA.</span>
-          </h2>
-          <p class="mt-5 max-w-xl text-[16px] sm:text-[17px] leading-relaxed text-ink-600">
-            Más de 10,000 alumnos han alcanzado su puntaje objetivo con nosotros. Conoce sus resultados académicos en el curso PAA.
-          </p>
-
-          <div class="mt-8 flex flex-wrap gap-3">
-            <span class="inline-flex items-center gap-1.5 rounded-full border border-ink-200 bg-white px-4 py-2 text-sm font-medium text-ink-700 shadow-sm">
-              <Icon name="ph:seal-check" class="size-4 text-teal-600" />
-              Garantía por Contrato
-            </span>
-            <span class="inline-flex items-center gap-1.5 rounded-full border border-ink-200 bg-white px-4 py-2 text-sm font-medium text-ink-700 shadow-sm">
-              <Icon name="ph:users" class="size-4 text-teal-600" />
-              10,000+ Alumnos
-            </span>
-            <span class="inline-flex items-center gap-1.5 rounded-full border border-ink-200 bg-white px-4 py-2 text-sm font-medium text-ink-700 shadow-sm">
-              <Icon name="ph:trophy" class="size-4 text-teal-600" />
-              Top Scores PAA
-            </span>
+    {courseTestimonials.length > 0 && (
+      <section id="testimonios" class="bg-white py-20 hairline-b" aria-label={`Testimonios y casos de éxito ${program.exam}`}>
+        <div class="container-edge">
+          <div class="flex items-center justify-between gap-6" data-reveal>
+            <h2 class="font-display text-[clamp(2rem,4vw,3rem)] font-semibold leading-[1.05] tracking-tight text-ink-950">
+              Ellos ya lograron <span class="text-[#008f7a]">su meta.</span>
+            </h2>
+            <div class="flex shrink-0 gap-2" data-testimonial-controls>
+              <button type="button" data-testimonial-prev aria-label="Testimonio anterior" class="grid size-10 place-items-center rounded-full border border-ink-200 text-ink-700 transition-colors hover:bg-ink-50">
+                <Icon name="ph:arrow-right" class="size-4 rotate-180" aria-hidden="true" />
+              </button>
+              <button type="button" data-testimonial-next aria-label="Testimonio siguiente" class="grid size-10 place-items-center rounded-full border border-ink-200 text-ink-700 transition-colors hover:bg-ink-50">
+                <Icon name="ph:arrow-right" class="size-4" aria-hidden="true" />
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div class="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {paaTestimonials.map((t) => (
-            <div class="flex flex-col justify-between rounded-3xl border border-ink-950/[0.06] bg-ink-50/60 p-7 text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-teal-500/30 hover:bg-white hover:shadow-md" data-reveal>
-              <div>
+          <ul class="mt-10 flex snap-x snap-mandatory gap-5 overflow-x-auto pb-2 [scrollbar-width:none]" data-testimonial-track>
+            {courseTestimonials.map((t) => (
+              <li class="w-[17.5rem] shrink-0 snap-start rounded-3xl bg-[#eef1f0] p-6 sm:w-[19rem] lg:w-[calc((100%-3.75rem)/4)]" data-reveal>
                 <div class="flex items-center justify-between gap-3">
                   <div class="flex items-center gap-3">
-                    <img src={t.image} alt={t.name} width="48" height="48" loading="lazy" decoding="async" class="size-12 rounded-full object-cover border border-ink-950/10" />
+                    <img src={t.image} alt={t.name} width="44" height="44" loading="lazy" decoding="async" class="size-11 rounded-full border border-ink-950/10 object-cover" />
                     <div>
-                      <h3 class="font-display text-[16px] font-bold text-ink-950">{t.name}</h3>
-                      <p class="font-mono text-[11px] font-semibold text-teal-600 uppercase tracking-wider">Curso PAA</p>
+                      <h3 class="font-display text-[15px] font-semibold text-ink-950">{t.name}</h3>
+                      <p class="font-mono text-[10px] font-semibold uppercase tracking-wider text-teal-600">Curso {landing.label}</p>
                     </div>
                   </div>
                   <span class="grid size-8 place-items-center rounded-full bg-teal-50 text-teal-600">
-                    <Icon name="ph:arrow-up-right" class="size-4" />
+                    <Icon name="ph:arrow-right" class="size-4" aria-hidden="true" />
                   </span>
                 </div>
-                <blockquote class="mt-5 text-[14.5px] leading-relaxed text-ink-700">
-                  &ldquo;{t.quote}&rdquo;
-                </blockquote>
-              </div>
-            </div>
-          ))}
+                <blockquote class="mt-4 text-[13.5px] leading-relaxed text-ink-700">&ldquo;{t.quote}&rdquo;</blockquote>
+              </li>
+            ))}
+          </ul>
+
+          <p class="mt-8">
+            <a href={`${testimonialsPath(program.slug)}/`} class="inline-flex items-center gap-2 font-display text-[15px] font-semibold text-[#008f7a] hover:underline">
+              Ver todos los testimonios del curso {landing.label}
+              <Icon name="ph:arrow-right" class="size-4" aria-hidden="true" />
+            </a>
+          </p>
         </div>
-      </div>
-    </section>
+      </section>
+    )}
 
     <!-- 6. RESOLVEMOS TUS DUDAS (blanco) -->
-    <section class="course-faq py-24 bg-white" aria-label="Preguntas frecuentes sobre el curso PAA">
+    <section class="course-faq py-24 bg-white" aria-label={`Preguntas frecuentes sobre el curso ${program.exam}`}>
       <div class="container-edge grid items-center gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
         <div class="flex items-center justify-center" data-reveal>
           <div class="relative mx-auto w-full max-w-[460px]">
             <!-- Animación GIF detrás -->
-            <img src="/images/animation-faq-trans.gif" alt="" width="300" height="300" class="absolute left-0 top-[10%] z-0 w-[35%] max-w-[220px] sm:-left-4 lg:-left-6" aria-hidden="true" />
-            <!-- Laptop PAA -->
-            <img src={program.faqImage} alt="Simulador PAA en Laptop" width="1004" height="814" loading="lazy" decoding="async" class="relative z-10 w-full drop-shadow-2xl" aria-hidden="true" />
+            <img src="/images/animation-faq-trans.gif" alt="" width="300" height="300" loading="lazy" decoding="async" class="absolute left-0 top-[10%] z-0 w-[35%] max-w-[220px] sm:-left-4 lg:-left-6" aria-hidden="true" />
+            <img src={program.faqImage} alt={`Simulador de práctica del examen ${program.exam} en laptop`} width="1004" height="814" loading="lazy" decoding="async" class="relative z-10 w-full drop-shadow-2xl" />
           </div>
         </div>
         <div data-reveal>
           <h2 class="mb-8 font-display text-3xl sm:text-4xl font-semibold tracking-tight text-ink-950">
             Resolvemos <span class="text-[#008f7a]">tus dudas.</span>
           </h2>
-          <FAQList faqs={program.faqs} name="faq-paa" defaultOpenFirst={false} />
+          <FAQList faqs={faqs} name={`faq-${program.slug}`} defaultOpenFirst={false} />
         </div>
       </div>
     </section>
-  ) : (
-    <!-- ======================================================== -->
-    <!-- SECUENCIA GENERAL PARA SAT, TOEFL, GRE, GMAT, ETC.        -->
-    <!-- ======================================================== -->
 
-    <!-- PREPARACIÓN ACADÉMICA -->
-    <section class="course-preparation py-24">
+  {relatedPosts.length > 0 && (
+    <section class="bg-white py-20 hairline-t" aria-label={`Artículos sobre ${program.exam}`}>
       <div class="container-edge">
-        <h2 class="text-3xl sm:text-5xl" data-reveal>
-          Preparación académica <em class="accent-em">a tu medida.</em>
+        <h2 class="font-display text-3xl sm:text-4xl font-semibold tracking-tight text-ink-950">
+          Sigue <span class="text-[#008f7a]">preparándote.</span>
         </h2>
-        <p class="mt-5 max-w-2xl text-base leading-relaxed text-ink-600" data-reveal>{academicIntro}</p>
-
-        <div class="mt-12 grid gap-5 lg:grid-cols-12">
-          {program.features.map((f, i) => {
-            const isWide = i === 0 || i === program.features.length - 1;
-            const img = i === 0 ? program.guideImage : i === program.features.length - 1 ? program.guaranteeImage : undefined;
-            return (
-              <div class:list={["relative flex flex-col justify-center overflow-hidden rounded-3xl border border-ink-950/[0.06] bg-ink-50 p-6 sm:p-8", isWide ? "lg:col-span-7" : "lg:col-span-5"]} data-reveal>
-                <div class="relative z-10 max-w-sm lg:max-w-[17rem] xl:max-w-xs">
-                  <div class="flex items-center gap-4">
-                    <span class="grid size-12 shrink-0 place-items-center rounded-full bg-teal-600 text-white">
-                      <Icon name={featureIcons[i] ?? "ph:check"} class="size-6" aria-hidden="true" />
-                    </span>
-                    <h3 class="font-display text-xl font-semibold tracking-tight text-ink-950">{f.title}</h3>
-                  </div>
-                  <p class="mt-4 text-[15px] leading-relaxed text-ink-600">{f.detail}</p>
-                </div>
-                {img && (
-                  <img
-                    src={img}
-                    alt=""
-                    width="360"
-                    height="280"
-                    loading="lazy"
-                    decoding="async"
-                    class:list={[
-                      "pointer-events-none absolute object-contain opacity-30 transition-opacity sm:opacity-100",
-                      i === 0
-                        ? "-bottom-6 -right-4 w-48 sm:bottom-auto sm:right-0 sm:top-1/2 sm:w-56 sm:-translate-y-1/2 lg:w-60"
-                        : "bottom-0 -right-4 w-64 sm:-right-2 sm:w-80 lg:w-96"
-                    ]}
-                    aria-hidden="true"
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </section>
-
-    <!-- DOMINA TU EXAMEN (oscuro) -->
-    <section class="course-sections relative overflow-hidden pt-12 pb-8 hairline-t-dim" style="background-color: rgb(8 13 13)" aria-label={`Secciones del examen ${program.exam}`}>
-      <div class="pointer-events-none absolute -left-40 top-0 h-[40rem] w-[40rem] rounded-full bg-[#0a1f1c] blur-[60px]" aria-hidden="true"></div>
-
-      {isSat && <div class="sat-study-art" aria-hidden="true"><span><Icon name="ph:check" /></span></div>}
-      {program.skillsImage && (
-        <img
-          src={program.skillsImage}
-          alt={`Estudiantes preparándose para el ${program.exam}`}
-          width="1100"
-          height="1093"
-          loading="lazy"
-          decoding="async"
-          class:list={[
-            "pointer-events-none absolute left-0 z-10 hidden object-contain object-bottom lg:block",
-            "bottom-0 w-[50vw] max-w-[950px] 2xl:w-[45vw]"
-          ]}
-          style="mask-image: linear-gradient(to right, black 75%, transparent 100%), linear-gradient(to top, black 80%, transparent 100%); mask-composite: intersect; -webkit-mask-image: linear-gradient(to right, black 75%, transparent 100%), linear-gradient(to top, black 80%, transparent 100%); -webkit-mask-composite: source-in;"
-          data-reveal
-        />
-      )}
-
-      <div class="container-edge grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
-        <div class="self-end lg:-ml-12 xl:-ml-24" data-reveal>
-          {program.skillsImage ? (
-            <img src={program.skillsImage} alt={`Estudiantes preparándose para el ${program.exam}`} width="1100" height="1093" loading="lazy" decoding="async" class="relative z-10 mx-auto w-full max-w-md object-contain object-bottom lg:hidden" style="mask-image: linear-gradient(to top, black 85%, transparent 100%); -webkit-mask-image: linear-gradient(to top, black 85%, transparent 100%);" />
-          ) : (
-            <div class="pointer-events-none aspect-square rounded-3xl bg-gradient-to-br from-teal-500/15 to-transparent lg:hidden" aria-hidden="true"></div>
-          )}
-        </div>
-
-        <div class="course-exam-details relative z-10 lg:pt-10 lg:pb-6" data-reveal>
-          <h2 class="font-display text-4xl font-semibold leading-[1.05] tracking-tight text-pearl sm:text-5xl">
-            {isDecoupled ? "Domina tu examen" : "Domina tu examen."}<br />
-            <em class="font-display italic font-medium text-teal-400">Todas las secciones.</em>
-          </h2>
-          <p class="mt-5 max-w-lg text-base leading-relaxed text-ink-300">
-            {isDecoupled ? "Cada sección de la prueba evalúa tu razonamiento y habilidades académicas esenciales. Nuestro plan ataca las áreas clave con una estrategia enfocada en mejorar tu puntaje." : "Cada sección del examen es una habilidad distinta. Tu plan ataca las cuatro con un enfoque y ejercicios específicos."}
-          </p>
-
-          {program.examSections ? (
-            <div class="mt-8" data-exam-tabs>
-              <div class="flex gap-1.5 rounded-[2rem] border border-white/5 bg-[#0b1613]/50 p-2" role="tablist" aria-label="Secciones del examen">
-                {program.examSections.map((s, i) => (
-                  <button
-                    type="button"
-                    role="tab"
-                    class="exam-tab flex flex-1 items-center justify-center gap-2 rounded-full px-2 py-2.5 font-display text-sm font-semibold text-ink-400 transition-all border border-transparent"
-                    data-exam-tab
-                    data-index={i}
-                    id={`exam-tab-${program.slug}-${i}`}
-                    aria-controls={`exam-panel-${program.slug}-${i}`}
-                    tabindex={i === 0 ? 0 : -1}
-                    aria-selected={i === 0 ? "true" : "false"}
-                  >
-                    <Icon name={examIcons[i] ?? "ph:circle"} class="size-[1.125rem] shrink-0 opacity-70 transition-opacity" aria-hidden="true" />
-                    <span>{s.name}</span>
-                  </button>
-                ))}
-              </div>
-
-              {program.examSections.map((s, i) => (
-                <div class="exam-panel mt-4 flex min-h-[35rem] flex-col justify-between overflow-hidden rounded-[1.5rem] border border-white/[0.04] bg-transparent backdrop-blur-xl shadow-2xl shadow-black/20 sm:min-h-[32rem]" data-exam-panel data-index={i} id={`exam-panel-${program.slug}-${i}`} role="tabpanel" aria-labelledby={`exam-tab-${program.slug}-${i}`} tabindex="0" hidden={i !== 0}>
-                  <div class="flex flex-1 flex-col justify-between bg-[#172c26]/75 p-7 sm:p-8">
-                    <div>
-                      <h3 class="font-display text-2xl font-semibold tracking-tight text-pearl sm:text-[1.7rem]">
-                        {s.name} {s.label && <span class="font-body text-[1.125rem] font-normal text-pearl/80">— {s.label}</span>}
-                      </h3>
-                      <p class="mt-3.5 max-w-2xl text-[15px] leading-relaxed text-pearl/70">{s.description}</p>
-                    </div>
-
-                    <div class="mt-8 flex flex-wrap gap-x-12 gap-y-4">
-                      <div>
-                        <p class="font-mono text-[9px] font-bold tracking-[0.2em] text-pearl/40 uppercase">Tiempo total</p>
-                        <p class="mt-1 font-display text-[17px] font-semibold text-pearl">{s.time}</p>
-                      </div>
-                      <div>
-                        <p class="font-mono text-[9px] font-bold tracking-[0.2em] text-pearl/40 uppercase">Puntaje de sección</p>
-                        <p class="mt-1 font-display text-[17px] font-semibold text-teal-400">
-                          {s.scoreRange} 
-                          <span class="text-[13px] font-normal text-pearl/40 ml-1">{isDecoupled ? "puntos" : `(escala ${program.scoreScale})`}</span>
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="flex flex-1 flex-col justify-center bg-[#121413]/75 p-7 pt-6 sm:px-8 sm:pb-8 sm:pt-7">
-                    <div>
-                      <p class="font-mono text-[9px] font-bold tracking-[0.2em] text-pearl/40 uppercase">Actividades de la sección</p>
-                      <ul class="mt-5 space-y-6">
-                        {s.activities.map((a, j) => (
-                          <li class="flex gap-4">
-                            <span class="grid size-8 shrink-0 place-items-center rounded-full bg-[#1e3c33] font-mono text-[13px] font-semibold text-teal-400">{j + 1}</span>
-                            <div class="pt-0.5">
-                              <p class="font-display text-[15px] font-semibold tracking-wide text-pearl">{a.title}</p>
-                              <p class="mt-1 text-[14px] leading-relaxed text-pearl/60">{a.detail}</p>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <ul class="mt-8 space-y-4">
-              {program.skills.map((skill) => (
-                <li class="rounded-2xl glass-dark p-6">
-                  <h3 class="font-display text-lg font-semibold tracking-tight text-pearl">{skill.name}</h3>
-                  <p class="mt-2 text-sm leading-relaxed text-ink-300">{skill.detail}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
-    </section>
-
-    <!-- LA MEJOR OPCIÓN / COMPARATIVA (general) -->
-    <section class="course-comparison bg-[#F8FAFC] py-24 sm:py-28 overflow-hidden">
-      <div class="container-edge grid items-center gap-16 lg:grid-cols-[0.75fr_1.25fr] lg:gap-12">
-        <div data-reveal class="space-y-6">
-          <h2 class="font-display text-[clamp(2.5rem,5vw,3.5rem)] font-semibold leading-[1.05] tracking-tight text-ink-950">
-            La mejor opción <br />
-            <span class="text-teal-600 italic">para aprobar</span>
-          </h2>
-          <p class="text-base leading-relaxed text-ink-600 max-w-lg">
-            En nuestro curso {program.exam} diseñamos una metodología flexible con la que aseguras que cada hora de estudio se traduzca en un puntaje real y medible.
-          </p>
-          <ul class="space-y-4 pt-2">
-            {benefits.map((b) => (
-              <li class="flex items-center gap-3.5 text-[15px] font-display font-medium text-ink-800">
-                <span class="grid size-6 shrink-0 place-items-center rounded-full bg-teal-600 text-pearl" aria-hidden="true">
-                  <Icon name="ph:check" class="size-3.5" />
+        <ul class="mt-8 grid gap-5 md:grid-cols-3">
+          {relatedPosts.map((post) => (
+            <li class="rounded-2xl border border-ink-950/[0.06] bg-ink-50/60 p-6 transition-colors hover:bg-white hover:border-teal-500/30">
+              <a href={`/blog/${post.id}/`} class="block">
+                <h3 class="font-display text-[17px] font-semibold leading-snug text-ink-950">{post.data.title}</h3>
+                <p class="mt-2 line-clamp-3 text-[14px] leading-relaxed text-ink-600">{post.data.description}</p>
+                <span class="mt-4 inline-flex items-center gap-2 font-display text-[14px] font-semibold text-[#008f7a]">
+                  Leer artículo
+                  <Icon name="ph:arrow-right" class="size-4" aria-hidden="true" />
                 </span>
-                {b}
-              </li>
-            ))}
-          </ul>
-          <div class="pt-4">
-            <a href="/contacto" class="btn-primary mt-9 !font-display !text-sm !font-bold !tracking-widest uppercase" data-magnetic>
-              Inscríbete ahora
-            </a>
-          </div>
-        </div>
-
-        <div class="relative max-w-xl lg:max-w-none mx-auto w-full overflow-x-auto pt-16 pb-12 scrollbar-none" data-reveal>
-          <div class="course-comparison-table relative min-w-[580px] lg:min-w-0 bg-white rounded-[2.5rem] border border-slate-100/80 px-6 py-6 shadow-[0_20px_50px_rgba(0,0,0,0.02)] grid grid-cols-[1fr_1.6fr_1fr] items-stretch">
-            
-            <div class="col-start-2 col-span-1 row-start-1 bg-[#07211E] rounded-[2.25rem] border border-teal-500/20 shadow-[0_20px_40px_rgba(0,0,0,0.3)] -my-10 z-0 pointer-events-none relative" style={`grid-row: 1 / span ${comparison.length + 2}`}>
-              <span class="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-[#008077] px-4 py-1.5 font-display text-[10px] font-bold tracking-widest text-white uppercase shadow-[0_4px_12px_rgba(0,0,0,0.15)] border border-teal-400/20">
-                MEJOR OFERTA
-              </span>
-            </div>
-
-            <div class="flex flex-col justify-end pb-3 border-b border-slate-100/60">
-              <span class="text-[10px] font-mono tracking-wider uppercase text-ink-400 font-bold">Comparativa</span>
-            </div>
-            <div class="relative z-10 text-left pt-7 pb-3 px-6 sm:px-8 flex flex-col justify-center items-start text-white col-start-2 row-start-1">
-              <h3 class="font-display text-[16px] sm:text-[18px] font-bold text-pearl leading-tight">Professional Academy</h3>
-              <p class="text-[11px] sm:text-[12px] text-teal-400/90 font-medium mt-1">Curso a tu medida</p>
-            </div>
-            <div class="text-left pt-7 pb-3 px-6 sm:px-8 border-b border-slate-100/60 flex flex-col justify-center items-start col-start-3 row-start-1">
-              <h3 class="font-display text-[16px] sm:text-[18px] font-semibold text-slate-800 leading-tight">Preparación tradicional</h3>
-              <p class="text-[11px] sm:text-[12px] text-slate-400/90 font-medium mt-1">Cursos presenciales</p>
-            </div>
-
-            {comparison.map((row, i) => {
-              const icons = ["ph:calendar-blank", "ph:toolbox", "ph:clipboard-text", "ph:graduation-cap", "ph:book-open", "ph:robot"];
-              const icon = icons[i] ?? "ph:check-circle";
-              const isLast = i === comparison.length - 1;
-              return (
-                <Fragment>
-                  <div class:list={["flex items-center gap-3 py-2.5 text-ink-700 font-display text-[13px] sm:text-[14px] font-semibold", !isLast && "border-b border-slate-100/60"]} style={`grid-row-start: ${i + 2}; grid-column-start: 1`}>
-                    <span class="text-slate-500 shrink-0"><Icon name={icon} class="size-5" /></span>
-                    <span>{row.label}</span>
-                  </div>
-                  <div class:list={["relative z-10 px-6 sm:px-8 py-2.5 flex items-center justify-start text-left font-display text-[13px] sm:text-[14px] font-medium border-t border-white/10 text-white gap-3"]} style={`grid-row-start: ${i + 2}; grid-column-start: 2`}>
-                    <div class="size-5 rounded-full bg-white/[0.18] flex items-center justify-center shrink-0">
-                      <Icon name="ph:check" class="size-3 text-white stroke-[2.5]" />
-                    </div>
-                    <span>{row.pa}</span>
-                  </div>
-                  <div class:list={["py-2.5 px-6 sm:px-8 text-left font-display text-[13px] sm:text-[14px] text-ink-400/80 flex items-center justify-start gap-3", !isLast && "border-b border-slate-100/60"]} style={`grid-row-start: ${i + 2}; grid-column-start: 3`}>
-                    <Icon name="ph:x-circle" class="size-5 text-teal-600/40 shrink-0" />
-                    <span>{row.trad}</span>
-                  </div>
-                </Fragment>
-              );
-            })}
-
-            <div style={`grid-row-start: ${comparison.length + 2}; grid-column-start: 1`}></div>
-            <div class="relative z-10 pb-6 pt-4 px-6 sm:px-8 border-t border-white/10" style={`grid-row-start: ${comparison.length + 2}; grid-column-start: 2`}>
-              <div class="bg-white/5 border border-white/10 rounded-2xl p-4 text-left">
-                <div class="flex items-start gap-3">
-                  <Icon name="ph:seal-check-fill" class="size-5.5 text-teal-400 shrink-0 mt-0.5" />
-                  <div>
-                    <h4 class="font-display text-[13px] sm:text-[14px] font-bold text-pearl leading-none">Garantía de puntaje</h4>
-                    <p class="text-[11px] sm:text-[12px] text-pearl/70 mt-1.5 leading-snug">Si no alcanzas tu objetivo, te reembolsamos al 100%.</p>
-                    <p class="text-[11px] sm:text-[12px] text-teal-400 font-semibold mt-1.5">+1,500 Estudiantes</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div style={`grid-row-start: ${comparison.length + 2}; grid-column-start: 3`}></div>
-
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- RESOLVEMOS TUS DUDAS (general) -->
-    <section class="course-faq py-24 hairline-t" aria-label={`Preguntas frecuentes sobre el curso ${program.exam}`}>
-      <div class="container-edge grid items-start gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
-        <div class="lg:sticky lg:top-28" data-reveal>
-          {program.faqImage ? (
-            <div class="relative">
-              <img src={isSat ? "/images/sat/checklist.webp" : "/images/animation-faq-trans.gif"} alt="" width="300" height="300" class="absolute -left-0 top-[10%] z-0 w-[35%] max-w-[220px] sm:-left-4 lg:-left-6" aria-hidden="true" />
-              <img src={program.faqImage} alt="" width="980" height="785" loading="lazy" decoding="async" class="relative z-10 w-full drop-shadow-2xl" aria-hidden="true" />
-            </div>
-          ) : (
-            <h2 class="text-3xl sm:text-4xl">Resolvemos<br /><em class="accent-em">tus dudas.</em></h2>
-          )}
-        </div>
-        <div data-reveal>
-          {program.faqImage && (
-            <h2 class="mb-8 text-3xl sm:text-4xl">Resolvemos <em class="accent-em">tus dudas.</em></h2>
-          )}
-          <FAQList faqs={program.faqs} name={`faq-${program.slug}`} />
-        </div>
+              </a>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   )}
@@ -1019,7 +748,7 @@ const schema = [
       <form id="course-msg-form" class="mx-auto mt-9 max-w-3xl" novalidate data-reveal>
         <p class="text-[clamp(1.125rem,1.8vw,1.5rem)] leading-[2] font-display font-medium text-ink-100">
           Hola, me llamo <input name="nombre" type="text" required autocomplete="name" aria-label="Tu nombre completo" placeholder="nombre completo" class="cm-field w-[14ch]" />.
-          Quiero informes del <span class="font-semibold text-[#00cfab]">curso {program.exam}{isDecoupled ? " del College Board" : ""}</span>.
+          Quiero informes del <span class="font-semibold text-[#00cfab]">curso {program.exam}{["paa", "sat", "piense-ii"].includes(program.slug) ? " del College Board" : ""}</span>.
           Pueden escribirme a <input name="correo" type="email" required inputmode="email" autocomplete="email" spellcheck="false" aria-label="Tu correo electrónico" placeholder="tu@correo.com" class="cm-field w-[14ch]" />
           o llamarme al <input name="telefono" type="tel" inputmode="tel" autocomplete="tel" aria-label="Tu número de teléfono" placeholder="tu número" class="cm-field w-[10ch]" />.
         </p>
@@ -1033,13 +762,37 @@ const schema = [
   </div>
 </Base>
 
+<script>
+  document.querySelectorAll<HTMLElement>("[data-testimonial-track]").forEach((track) => {
+    const root = track.closest("section");
+    const step = () => Math.max(track.clientWidth * 0.8, 280);
+    root?.querySelector("[data-testimonial-prev]")?.addEventListener("click", () => track.scrollBy({ left: -step(), behavior: "smooth" }));
+    root?.querySelector("[data-testimonial-next]")?.addEventListener("click", () => track.scrollBy({ left: step(), behavior: "smooth" }));
+  });
+</script>
+
+<script>
+  document.querySelectorAll<HTMLElement>("[data-elite-price]").forEach((box) => {
+    const toggle = box.querySelector<HTMLButtonElement>("[data-cash-toggle]");
+    if (!toggle) return;
+    const value = box.querySelector<HTMLElement>("[data-price-value]");
+    const before = box.querySelector<HTMLElement>("[data-price-before]");
+    toggle.addEventListener("click", () => {
+      const on = toggle.getAttribute("aria-checked") !== "true";
+      toggle.setAttribute("aria-checked", String(on));
+      if (value) value.textContent = on ? (box.dataset.cash ?? "") : (box.dataset.list ?? "");
+      before?.classList.toggle("hidden", !on);
+    });
+  });
+</script>
+
 <style>
   /* Variantes desacopladas de SAT y PAA; los demás cursos conservan sus estilos heredados. */
-  [data-course="sat"], [data-course="paa"] { background: #fff; }
-  [data-course="sat"] :is(h1,h2,h3, .font-display), [data-course="paa"] :is(h1,h2,h3, .font-display) { font-family: var(--font-body); }
-  [data-course="sat"] :is(h1,h2) { font-weight: 400; letter-spacing: -.035em; }
-  [data-course="sat"] :is(h1,h2) em { font-style: normal; font-weight: inherit; color: #0d9488; }
-  [data-course="sat"] h1 { font-size: clamp(2.75rem, 5.6vw, 4.5rem); line-height: 1.1; }
+  [data-course], [data-course] { background: #fff; }
+  [data-course] :is(h1,h2,h3, .font-display), [data-course] :is(h1,h2,h3, .font-display) { font-family: var(--font-body); }
+  [data-course] :is(h1,h2) { font-weight: 400; letter-spacing: -.035em; }
+  [data-course] :is(h1,h2) em { font-style: normal; font-weight: inherit; color: #0d9488; }
+  [data-course] h1 { font-size: clamp(2.75rem, 5.6vw, 4.5rem); line-height: 1.1; }
   
   /* Métricas PAA con fondo exacto de Figma: #112321, sin líneas divisorias verticales claras */
   .course-metrics-paa {
@@ -1059,68 +812,76 @@ const schema = [
     border-color: rgba(255, 255, 255, 0.05) !important;
   }
 
-  [data-course="sat"] .course-hero nav { display: none; }
-  [data-course="sat"] .course-hero h1 { margin-top: 0; }
-  [data-course="sat"] .course-preparation h3, [data-course="paa"] .course-preparation h3 { font-size: 1.5rem; font-weight: 500; }
-  [data-course="sat"] .course-preparation .rounded-3xl, [data-course="paa"] .course-preparation .rounded-3xl { border-radius: 1rem; background: #eaedec; min-height: 11.5rem; }
-  [data-course="sat"] .course-preparation img, [data-course="paa"] .course-preparation img { position: static; align-self: end; width: 11rem; opacity: 1; transform: none; margin-top: 1rem; }
-  [data-course="sat"] .course-sections, [data-course="paa"] .course-sections { background-color: #0d1614 !important; }
-  [data-course="sat"] .course-sections h2, [data-course="paa"] .course-sections h2 { font-size: clamp(2.25rem,4vw,3rem); }
-  [data-course="sat"] .course-sections .exam-panel, [data-course="paa"] .course-sections .exam-panel { min-height: 0; border-radius: 1.25rem; background: #172420; box-shadow: none; }
-  [data-course="sat"] .exam-panel > div:first-child, [data-course="paa"] .exam-panel > div:first-child { background: #1a3d36; padding: 1.5rem 2rem; }
-  [data-course="sat"] .exam-panel > div:last-child, [data-course="paa"] .exam-panel > div:last-child { padding: 1rem 2rem; }
-  [data-course="sat"] .exam-panel h3, [data-course="paa"] .exam-panel h3 { font-size: 1.625rem; }
-  [data-course="sat"] .exam-panel ul, [data-course="paa"] .exam-panel ul { margin-top: 1rem; }
-  [data-course="sat"] .exam-panel li + li, [data-course="paa"] .exam-panel li + li { margin-top: 1rem; }
-  [data-course="sat"] [role="tablist"], [data-course="paa"] [role="tablist"] { max-width: 38rem; padding: .25rem; border-radius: 1rem; }
-  [data-course="sat"] .exam-tab, [data-course="paa"] .exam-tab { border-radius: .75rem; font-size: .875rem; white-space: nowrap; }
+  [data-course] .course-hero h1 { margin-top: 0; }
+  [data-course] .course-preparation h3, [data-course] .course-preparation h3 { font-size: 1.5rem; font-weight: 500; }
+  [data-course] .course-preparation .rounded-3xl, [data-course] .course-preparation .rounded-3xl { border-radius: 1rem; background: #eaedec; min-height: 11.5rem; }
+  [data-course] .course-preparation .rounded-3xl:nth-child(-n+2) { min-height: 13.75rem; }
+  [data-course] .course-preparation img, [data-course] .course-preparation img { position: static; align-self: end; width: 11rem; opacity: 1; transform: none; margin-top: 1rem; }
+  [data-course] .course-sections, [data-course] .course-sections { background-color: #0d1614 !important; }
+  [data-course] .course-sections h2, [data-course] .course-sections h2 { font-size: clamp(2.25rem,4vw,3rem); }
+  [data-course] .course-sections .exam-panel, [data-course] .course-sections .exam-panel { min-height: 0; border-radius: 1.25rem; background: #172420; box-shadow: none; }
+  [data-course] .exam-panel > div:first-child, [data-course] .exam-panel > div:first-child { background: #1a3d36; padding: 1.5rem 2rem; }
+  [data-course] .exam-panel > div:last-child, [data-course] .exam-panel > div:last-child { padding: 1rem 2rem; }
+  [data-course] .exam-panel h3, [data-course] .exam-panel h3 { font-size: 1.625rem; }
+  [data-course] .exam-panel ul, [data-course] .exam-panel ul { margin-top: 1rem; }
+  [data-course] .exam-panel li + li, [data-course] .exam-panel li + li { margin-top: 1rem; }
+  [data-course] [role="tablist"], [data-course] [role="tablist"] { max-width: 100%; padding: .25rem; border-radius: 1rem; }
+  [data-course] .exam-tab, [data-course] .exam-tab { border-radius: .75rem; font-size: .875rem; white-space: nowrap; }
   [data-course="sat"] .exam-tab:first-child { flex: 1.4; }
-  [data-course="sat"] .exam-tab:focus-visible, [data-course="paa"] .exam-tab:focus-visible { outline: 2px solid #2dd4bf; outline-offset: 3px; }
-  [data-course="sat"] .course-comparison, [data-course="paa"] .course-comparison { background: #f0f4f3; }
-  [data-course="sat"] .course-comparison h2 span, [data-course="paa"] .course-comparison h2 span { font-style: normal; }
-  [data-course="sat"] .course-comparison h2, [data-course="paa"] .course-comparison h2 { font-size: clamp(2.5rem,4vw,3rem); }
-  [data-course="sat"] .course-comparison ul li, [data-course="paa"] .course-comparison ul li { border-bottom: 1px solid #dce3e1; padding-bottom: 1rem; }
-  [data-course="sat"] .course-faq .hairline-t, [data-course="paa"] .course-faq .hairline-t { border-top: 0; }
-  [data-course="sat"] :global(.faq-item[data-active="true"] .faq-icon), [data-course="paa"] :global(.faq-item[data-active="true"] .faq-icon) { background: transparent; border-color: #e2e8e6; color: #060a0a; }
+  [data-course] .exam-tab:focus-visible, [data-course] .exam-tab:focus-visible { outline: 2px solid #2dd4bf; outline-offset: 3px; }
+  [data-course] .course-comparison, [data-course] .course-comparison { background: #f0f4f3; }
+  [data-course] .course-comparison h2 span, [data-course] .course-comparison h2 span { font-style: normal; }
+  [data-course] .course-comparison h2, [data-course] .course-comparison h2 { font-size: clamp(2.5rem,4vw,3rem); }
+  [data-course] .course-comparison ul li, [data-course] .course-comparison ul li { border-bottom: 1px solid #dce3e1; padding-bottom: 1rem; }
+  [data-course] .course-faq .hairline-t, [data-course] .course-faq .hairline-t { border-top: 0; }
+  [data-course] :global(.faq-item[data-active="true"] .faq-icon), [data-course] :global(.faq-item[data-active="true"] .faq-icon) { background: transparent; border-color: #e2e8e6; color: #060a0a; }
   .sat-study-art { display: block; position: absolute; inset: 0 50% 0 0; overflow: hidden; }
   .sat-study-art::before { content: ""; position: absolute; width: 70rem; height: 70rem; left: -6rem; top: 3rem; border: 8rem solid #12312b; border-radius: 50%; opacity: .5; }
   .sat-study-art > span { position: absolute; z-index: 11; top: 23%; left: 20%; display: grid; place-items: center; width: 4.5rem; height: 4.5rem; border-radius: 50%; background: #0d9488; color: white; transform: rotate(-15deg); }
   .sat-study-art svg { width: 2.75rem; height: 2.75rem; }
 
   @media (min-width: 64rem) {
-    [data-course="sat"] .course-hero > .container-edge { min-height: 42.5rem; padding-top: 11rem; }
-    [data-course="paa"] .course-hero > .container-edge { min-height: 45rem; padding-top: 10.75rem; padding-bottom: 5rem; }
-    [data-course="sat"] .course-hero > .container-edge > div { padding-top: 0; }
-    [data-course="sat"] .course-hero-image { left: 49%; right: auto; width: 92%; max-width: none; }
-    [data-course="paa"] .course-hero-image-wrapper { left: auto; right: 1.5rem; width: 44%; max-width: 540px; bottom: 3rem; }
-    [data-course="sat"] .course-preparation .rounded-3xl, [data-course="paa"] .course-preparation .rounded-3xl { padding: 2rem; }
-    [data-course="sat"] .course-preparation .rounded-3xl:first-child, [data-course="paa"] .course-preparation .rounded-3xl:first-child { grid-column: span 8; }
-    [data-course="sat"] .course-preparation .rounded-3xl:nth-child(2), [data-course="paa"] .course-preparation .rounded-3xl:nth-child(2) { grid-column: span 4; }
-    [data-course="sat"] .course-preparation .rounded-3xl:nth-child(3), [data-course="paa"] .course-preparation .rounded-3xl:nth-child(3) { grid-column: span 5; }
-    [data-course="sat"] .course-preparation .rounded-3xl:last-child, [data-course="paa"] .course-preparation .rounded-3xl:last-child { grid-column: span 7; }
-    [data-course="sat"] .course-preparation .rounded-3xl:has(img) > div, [data-course="paa"] .course-preparation .rounded-3xl:has(img) > div { max-width: 62%; }
-    [data-course="sat"] .course-preparation img, [data-course="paa"] .course-preparation img { position: absolute; right: 1rem; top: auto; bottom: 0; width: 31%; margin: 0; }
-    [data-course="sat"] .course-preparation .rounded-3xl:last-child img, [data-course="paa"] .course-preparation .rounded-3xl:last-child img { width: 36%; }
-    [data-course="sat"] .course-sections, [data-course="paa"] .course-sections { min-height: 48rem; padding-block: 5.5rem 4rem; }
-    [data-course="sat"] .course-sections > img, [data-course="paa"] .course-sections > img { height: 90%; width: 48%; max-width: none; left: 0; bottom: 0; object-fit: contain; object-position: right bottom; mask-image: none !important; -webkit-mask-image: none !important; }
-    [data-course="sat"] .course-sections .course-exam-details, [data-course="paa"] .course-sections .course-exam-details { padding-top: .5rem; }
-    [data-course="sat"] .course-comparison .course-comparison-table, [data-course="paa"] .course-comparison .course-comparison-table { grid-template-columns: .9fr 1.35fr 1.35fr; }
+    [data-course] .course-hero > .container-edge { min-height: 42rem; padding-top: 10.75rem; padding-bottom: 3rem; }
+    [data-course] .course-hero > .container-edge > div { padding-top: 0; }
+    [data-course] .course-hero-image { left: 49%; right: auto; width: 92%; max-width: none; }
+    [data-course] .course-hero-image-wrapper { left: auto; right: calc(50% - 50vw); width: 50vw; max-width: 880px; bottom: -3.5rem; }
+    /* El sello no debe tapar el panel izquierdo de la captura (como en Figma). */
+    /* TOEFL "Domina tu examen": figura más pequeña, separada del panel y check sólido como en Figma. */
+    [data-course="toefl-ibt"] .student-img { translate: -5.5rem 0; scale: .93; transform-origin: left bottom; }
+    [data-course="sat"] .course-seal { translate: 0 -2.75rem; }
+    [data-course="toefl-ibt"] .course-seal { translate: 0 -4.75rem; }
+  [data-course="act"] .course-seal { translate: 0 -4.5rem; }
+    [data-course] .course-preparation .rounded-3xl, [data-course] .course-preparation .rounded-3xl { padding: 2rem; }
+    [data-course] .course-preparation .rounded-3xl:first-child, [data-course] .course-preparation .rounded-3xl:first-child { grid-column: span 8; }
+    [data-course] .course-preparation .rounded-3xl:nth-child(2), [data-course] .course-preparation .rounded-3xl:nth-child(2) { grid-column: span 4; }
+    [data-course] .course-preparation .rounded-3xl:nth-child(3), [data-course] .course-preparation .rounded-3xl:nth-child(3) { grid-column: span 5; }
+    [data-course] .course-preparation .rounded-3xl:last-child, [data-course] .course-preparation .rounded-3xl:last-child { grid-column: span 7; }
+    [data-course] .course-preparation .rounded-3xl:has(img) > div, [data-course] .course-preparation .rounded-3xl:has(img) > div { max-width: 62%; }
+    [data-course] .course-preparation img, [data-course] .course-preparation img { position: absolute; right: 1rem; top: auto; bottom: 0; width: 31%; margin: 0; }
+    [data-course] .course-preparation .rounded-3xl:last-child img, [data-course] .course-preparation .rounded-3xl:last-child img { width: 36%; }
+    [data-course] .course-sections, [data-course] .course-sections { min-height: 40rem; padding-block: 5.5rem 0; }
+    [data-course] .course-sections > img, [data-course] .course-sections > img { height: 90%; width: 48%; max-width: none; left: 0; bottom: 0; object-fit: contain; object-position: right bottom; mask-image: none !important; -webkit-mask-image: none !important; }
+    [data-course] .course-sections .course-exam-details, [data-course] .course-sections .course-exam-details { padding-top: .5rem; }
+    [data-course] .course-comparison .course-comparison-table, [data-course] .course-comparison .course-comparison-table { grid-template-columns: .9fr 1.35fr 1.35fr; }
   }
   @media (max-width: 63.99rem) {
-    [data-course="sat"] .course-sections > .container-edge, [data-course="paa"] .course-sections > .container-edge { display: flex; flex-direction: column-reverse; }
+    [data-course] .course-sections > .container-edge, [data-course] .course-sections > .container-edge { display: flex; flex-direction: column-reverse; }
   }
   @media (max-width: 39.99rem) {
-    [data-course="sat"] .exam-panel > div, [data-course="paa"] .exam-panel > div { padding: 1.25rem; }
-    [data-course="sat"] .course-sections img, [data-course="paa"] .course-sections img { max-height: 22rem; }
-    [data-course="sat"] .course-comparison .course-comparison-table, [data-course="paa"] .course-comparison .course-comparison-table { min-width: 0; grid-template-columns: .9fr 1.2fr 1fr; padding-inline: .5rem; border-radius: 1rem; }
-    [data-course="sat"] .course-comparison .course-comparison-table > div, [data-course="paa"] .course-comparison .course-comparison-table > div { padding-inline: .4rem; gap: .25rem; font-size: .8125rem; overflow-wrap: normal; }
-    [data-course="sat"] .course-comparison .course-comparison-table h3, [data-course="paa"] .course-comparison .course-comparison-table h3 { font-size: .875rem; }
-    [data-course="sat"] .course-comparison .course-comparison-table svg, [data-course="paa"] .course-comparison .course-comparison-table svg { display: none; }
-    [data-course="sat"] .course-comparison .course-comparison-table .size-5, [data-course="paa"] .course-comparison .course-comparison-table .size-5 { display: none; }
-    [data-course="sat"] .course-comparison .course-comparison-table .rounded-2xl, [data-course="paa"] .course-comparison .course-comparison-table .rounded-2xl { padding: .5rem; }
-    [data-course="sat"] .course-comparison .course-comparison-table .rounded-2xl p, [data-course="paa"] .course-comparison .course-comparison-table .rounded-2xl p { font-size: .65rem; }
+    [data-course] .exam-panel > div, [data-course] .exam-panel > div { padding: 1.25rem; }
+    [data-course] .course-sections img, [data-course] .course-sections img { max-height: 22rem; }
+    [data-course] .course-comparison .course-comparison-table, [data-course] .course-comparison .course-comparison-table { min-width: 0; grid-template-columns: .9fr 1.2fr 1fr; padding-inline: .5rem; border-radius: 1rem; }
+    [data-course] .course-comparison .course-comparison-table > div, [data-course] .course-comparison .course-comparison-table > div { padding-inline: .4rem; gap: .25rem; font-size: .8125rem; overflow-wrap: normal; }
+    [data-course] .course-comparison .course-comparison-table h3, [data-course] .course-comparison .course-comparison-table h3 { font-size: .875rem; }
+    [data-course] .course-comparison .course-comparison-table svg, [data-course] .course-comparison .course-comparison-table svg { display: none; }
+    [data-course] .course-comparison .course-comparison-table .size-5, [data-course] .course-comparison .course-comparison-table .size-5 { display: none; }
+    [data-course] .course-comparison .course-comparison-table .rounded-2xl, [data-course] .course-comparison .course-comparison-table .rounded-2xl { padding: .5rem; }
+    [data-course] .course-comparison .course-comparison-table .rounded-2xl p, [data-course] .course-comparison .course-comparison-table .rounded-2xl p { font-size: .65rem; }
   }
 
+  @media (min-width: 64rem) {
+    .student-img { width: var(--sw); margin-left: calc((var(--sw) - 100%) * -0.2); }
+  }
   .exam-tab[aria-selected="true"] {
     background: #132a24;
     border-color: rgba(255, 255, 255, 0.08);
@@ -1152,7 +913,7 @@ const schema = [
   .cm-field[aria-invalid="true"] { border-bottom-color: #f87171; }
 </style>
 
-<script define:vars={{ whatsapp: SITE.whatsapp, exam: program.exam, isModernCourse: isDecoupled, isSat }}>
+<script define:vars={{ whatsapp: SITE.whatsapp, exam: program.exam, isModernCourse: true, isSat }}>
   function initCoursePage() {
     // Tabs de secciones del examen
     const tabsRoot = document.querySelector("[data-exam-tabs]");

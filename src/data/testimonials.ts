@@ -298,5 +298,113 @@ export const TESTIMONIALS: Testimonial[] = [
     image: "https://cms.proacademymx.com/wp-content/uploads/2017/05/SAT-Nate-Davalos.webp",
     quote: "Muy personalizado, se enfocó en mis debilidades al 100%, trabajamos en el horario que quería y la verdad no creí que fuera a subir mi calificación tanto, me sorprendió",
     hasDetail: false
+  },
+  {
+    name: "Sofía Parrado",
+    program: "SAT",
+    score: "",
+    initials: "SP",
+    image: "/images/sat/avatars/sofia-parrado.webp",
+    quote: "Las clases trabajan muy bien en cada tipo de pregunta y siempre responden súper rápido cuando tienes dudas. Vale la pena si tienes poco tiempo para estudiar.",
+    hasDetail: false
+  },
+  {
+    name: "Daniela Morales",
+    program: "SAT",
+    score: "",
+    initials: "DM",
+    image: "/images/sat/avatars/daniela-morales.webp",
+    quote: "Me ayudó muchísimo a saber dónde necesitaba practicar más. Los profesores en las clases 1 a 1 aclaran las dudas súper bien y te motivan a seguir estudiando.",
+    hasDetail: false
+  },
+  {
+    name: "Lucas Uribe",
+    program: "SAT",
+    score: "",
+    initials: "LU",
+    image: "/images/sat/avatars/lucas-uribe.webp",
+    quote: "Los exámenes de práctica se parecen a la prueba real. Me dieron muy buenos tips para llegar a un puntaje alto sin tener que estudiar todo desde cero.",
+    hasDetail: false
+  },
+  {
+    name: "Elena Castillo",
+    program: "SAT",
+    score: "",
+    initials: "EC",
+    image: "/images/sat/avatars/elena-castillo.webp",
+    quote: "Las explicaciones, tanto en video como por escrito, son súper claras. De los mejores cursos que he encontrado en línea para el SAT.",
+    hasDetail: false
+  },
+  {
+    name: "Leonardo Rodríguez",
+    program: "PIENSE II",
+    score: "",
+    initials: "LR",
+    image: "/images/piense-ii/avatars/leonardo-rodriguez.webp",
+    quote: "Compré el curso porque no era muy bueno en mis clases de matemáticas. Me pareció excelente y las lecciones me ayudaron mucho. Incluso ahora me va mejor en las clases.",
+    hasDetail: false
+  },
+  {
+    name: "Jimena Moreno",
+    program: "PIENSE II",
+    score: "",
+    initials: "JM",
+    image: "/images/piense-ii/avatars/jimena-moreno.webp",
+    quote: "Me gustó porque se preocupan porque aprendas todos los temas. La verdad sí lo recomiendo para entrar a la prepa.",
+    hasDetail: false
+  },
+  {
+    name: "Gabriela Parrado",
+    program: "PIENSE II",
+    score: "",
+    initials: "GP",
+    image: "/images/piense-ii/avatars/gabriela-parrado.webp",
+    quote: "Mis papás me inscribieron al curso porque no se me daba la comprensión lectora y logré entrar al Tec, que era lo que quería. La verdad, muy buen curso.",
+    hasDetail: false
+  },
+  {
+    name: "María Hernández",
+    program: "PIENSE II",
+    score: "",
+    initials: "MH",
+    image: "/images/piense-ii/avatars/maria-hernandez.webp",
+    quote: "Mis dos hijos entraron a la preparatoria estudiando con las clases 1 a 1. Los profesores están muy preparados.",
+    hasDetail: false
+  },
+  {
+    name: "Diego Santos",
+    program: "ACT",
+    score: "",
+    initials: "DS",
+    image: "/images/act/avatars/diego-santos.webp",
+    quote: "Hacía exámenes en línea y no me alcanzaba el tiempo para constestar las preguntas. Con los simuladores le agarré la onda y aprobé mi examen. Lo recomiendo.",
+    hasDetail: false
+  },
+  {
+    name: "Valeria Castillo",
+    program: "ACT",
+    score: "",
+    initials: "VC",
+    image: "/images/act/avatars/valeria-castillo.webp",
+    quote: "Me metí al curso porque quería aplicar a una beca en Estados Unidos y necesitaba un buen puntaje. Los profes te explican con mucha paciencia y sí se nota que mejoras.",
+    hasDetail: false
+  },
+  {
+    name: "Mateo Sánchez",
+    program: "ACT",
+    score: "",
+    initials: "MS",
+    image: "/images/act/avatars/mateo-sanchez.webp",
+    quote: "Matemáticas en inglés se me complicaban bastante, pero las clases 1 a 1 me ayudaron muchísimo. Llegas mucho más seguro el día del examen.",
+    hasDetail: false
+  },
+  {
+    name: "Laura Mendoza",
+    program: "ACT",
+    score: "",
+    initials: "LM",
+    image: "/images/act/avatars/laura-mendoza.webp",
+    quote: "Estuve un mes preparándome para el ACT y me gustó mucho. Tienen un montón de ejercicios y te ayudan cuando te atoras o no entiendes algo. Son los mejores.",
+    hasDetail: false
   }
 ];

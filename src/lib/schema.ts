@@ -1,5 +1,5 @@
 import { SITE } from "@/data/site";
-import { coursePath, type Program } from "@/data/programs";
+import { coursePath, pricingPath, type Program } from "@/data/programs";
 
 const ORG_ID = `${SITE.url}/#organization`;
 
@@ -23,12 +23,6 @@ export function organizationSchema() {
       addressCountry: SITE.address.country,
     },
     sameAs: Object.values(SITE.social),
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: "4.9",
-      reviewCount: "320",
-      bestRating: "5",
-    },
   };
 }
 
@@ -74,11 +68,12 @@ export function courseSchema(program: Program) {
     provider: { "@id": ORG_ID },
     inLanguage: "es-MX",
     offers: {
-      "@type": "Offer",
-      price: program.priceMXN,
+      "@type": "AggregateOffer",
+      lowPrice: program.priceFromMXN ?? program.priceMXN,
+      highPrice: program.priceToMXN ?? program.priceMXN,
       priceCurrency: "MXN",
       availability: "https://schema.org/InStock",
-      url: `${SITE.url}${coursePath(program.slug)}`,
+      url: `${SITE.url}${pricingPath(program.slug)}`,
       category: "Paid",
     },
     hasCourseInstance: {
@@ -89,12 +84,6 @@ export function courseSchema(program: Program) {
         "@type": "Person",
         name: `Tutores certificados ${program.exam}`,
       },
-    },
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: "4.9",
-      reviewCount: "120",
-      bestRating: "5",
     },
   };
 }

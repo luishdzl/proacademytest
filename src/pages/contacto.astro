@@ -4,7 +4,7 @@ import { Icon } from "astro-icon/components";
 import { SITE } from "@/data/site";
 import { breadcrumbSchema, localBusinessSchema } from "@/lib/schema";
 
-const cursos = ["TOEFL iBT", "SAT", "GRE", "GMAT", "PAA"];
+const cursos = ["TOEFL iBT", "SAT", "GRE", "GMAT", "PAA", "PIENSE-II", "ACT"];
 
 const benefits = [
   "Recibe feedback directo y personalizado en clases particulares",
@@ -236,6 +236,12 @@ const channels = [
     const form = document.getElementById("contact-msg-form");
     if (!form || form.dataset.bound) return;
     form.dataset.bound = "true";
+    const preselected = new URLSearchParams(window.location.search).get("curso");
+    const courseSelect = form.querySelector('select[name="curso"]');
+    if (preselected && courseSelect) {
+      const match = [...courseSelect.options].find((o) => o.value.toLowerCase() === preselected.toLowerCase());
+      if (match) courseSelect.value = match.value;
+    }
     const status = document.getElementById("contact-msg-status");
 
     form.addEventListener("submit", (e) => {
