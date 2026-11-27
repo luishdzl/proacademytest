@@ -1,6 +1,7 @@
 import { categoryDescription } from "./wordpress";
 import { publicBlogLinks } from "./blog-links";
 import { stripFeaturedImageDuplicates } from "./blog-images";
+import { slugify } from "./slug";
 import generatedBlogData from "@/data/blog-generated.json";
 import fallbackPostsData from "@/data/blog-fallback.json";
 
@@ -49,16 +50,47 @@ export interface CategoryWithCount {
   description: string;
 }
 
+/** Snapshots can contain categories with a blank slug (legacy WordPress data).
+ *  Astro needs a non-empty string for every [categoria] path param. */
+function normalizeCategoryRef(value: unknown): BlogCategoryRef | null {
+  const category = value as Partial<BlogCategoryRef> | null | undefined;
+  const name = typeof category?.name === "string" ? category.name.trim() : "";
+  const rawSlug =
+    typeof category?.slug === "string" || typeof category?.slug === "number"
+      ? String(category.slug)
+      : "";
+  const slug = slugify(rawSlug) || slugify(name) || "general";
+
+  return { name: name || "General", slug };
+}
+
+function normalizeCategories(value: unknown): BlogCategoryRef[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const categories: BlogCategoryRef[] = [];
+
+  for (const item of value) {
+    const category = normalizeCategoryRef(item);
+    if (!category || seen.has(category.slug)) continue;
+    seen.add(category.slug);
+    categories.push(category);
+  }
+
+  return categories;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function snapshotToPost(item: any): Post {
+  const categories = normalizeCategories(item.categories);
+
   return {
     id: item.slug,
     data: {
       title: item.title,
       description: item.description,
-      category: item.category,
-      categorySlug: item.categorySlug,
-      categories: item.categories ?? [],
+      category: item.category || categories[0]?.name || "General",
+      categorySlug: slugify(item.categorySlug ?? "") || categories[0]?.slug || "general",
+      categories,
       pubDate: new Date(item.pubDate),
       updatedDate: item.updatedDate ? new Date(item.updatedDate) : undefined,
       image: item.image ?? undefined,
@@ -114,7 +146,10 @@ export async function getBlogCategories(posts?: Post[]): Promise<CategoryWithCou
   const map = new Map<string, CategoryWithCount>();
 
   for (const post of all) {
-    for (const cat of post.data.categories) {
+    for (const rawCategory of post.data.categories) {
+      const cat = normalizeCategoryRef(rawCategory);
+      if (!cat) continue;
+
       const existing = map.get(cat.slug);
       if (existing) {
         existing.count++;
