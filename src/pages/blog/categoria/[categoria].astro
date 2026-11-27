@@ -14,15 +14,17 @@ export async function getStaticPaths() {
   const allPosts = await getPublishedPosts();
   const categories = await getBlogCategories(allPosts);
 
-  return categories.map((category) => ({
-    params: { categoria: category.slug },
-    props: {
-      category,
-      posts: allPosts.filter((post) =>
-        post.data.categories.some((c) => c.slug === category.slug),
-      ),
-    },
-  }));
+  return categories
+    .filter((category) => typeof category.slug === "string" && category.slug.trim().length > 0)
+    .map((category) => ({
+      params: { categoria: category.slug },
+      props: {
+        category,
+        posts: allPosts.filter((post) =>
+          post.data.categories.some((c) => c.slug === category.slug),
+        ),
+      },
+    }));
 }
 
 interface Props {
